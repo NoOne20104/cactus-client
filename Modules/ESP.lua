@@ -1,5 +1,5 @@
--- Cactus Client - ESP Module (Clean Rewrite, spacing x2)
--- Multi-tracer ESP with team colors and guaranteed scroll UI
+-- Cactus Client - ESP Module (Compact UI Rewrite)
+-- Multi-tracer ESP with team colors and compact scroll UI
 
 local ESP = {}
 
@@ -56,12 +56,12 @@ function ESP.Init(Client)
 
 	local function NewSet()
 		return {
-			Bottom = New("Line",   {Thickness=1.5,Transparency=1,Visible=false}),
-			Top    = New("Line",   {Thickness=1.5,Transparency=1,Visible=false}),
-			Middle = New("Line",   {Thickness=1.5,Transparency=1,Visible=false}),
-			Box    = New("Square",{Thickness=1.5,Transparency=1,Filled=false,Visible=false}),
-			Name   = New("Text",  {Size=13,Center=true,Outline=true,Font=2,Visible=false}),
-			Dist   = New("Text",  {Size=12,Center=true,Outline=true,Font=2,Visible=false})
+			Bottom = New("Line",   {Thickness=1.2,Transparency=1,Visible=false}),
+			Top    = New("Line",   {Thickness=1.2,Transparency=1,Visible=false}),
+			Middle = New("Line",   {Thickness=1.2,Transparency=1,Visible=false}),
+			Box    = New("Square",{Thickness=1.2,Transparency=1,Filled=false,Visible=false}),
+			Name   = New("Text",  {Size=12,Center=true,Outline=true,Font=2,Visible=false}),
+			Dist   = New("Text",  {Size=11,Center=true,Outline=true,Font=2,Visible=false})
 		}
 	end
 
@@ -195,13 +195,13 @@ function ESP.Init(Client)
 
 					if State.Names then
 						set.Name.Text = plr.Name
-						set.Name.Position = Vector2.new(pos.X,pos.Y-32)
+						set.Name.Position = Vector2.new(pos.X,pos.Y-30)
 						set.Name.Visible = true
 					else set.Name.Visible=false end
 
 					if State.Distance then
 						set.Dist.Text = string.format("[%.0fm]",dist)
-						set.Dist.Position = Vector2.new(pos.X,pos.Y-18)
+						set.Dist.Position = Vector2.new(pos.X,pos.Y-16)
 						set.Dist.Visible = true
 					else set.Dist.Visible=false end
 
@@ -211,11 +211,11 @@ function ESP.Init(Client)
 	end)
 
 	-- =========================
-	-- UI (guaranteed scroll, spacing x2)
+	-- UI (compact cactus panel)
 	-- =========================
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0,240,0,280)
+	frame.Size = UDim2.new(0,190,0,210)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
 	frame.Parent = Page
@@ -226,41 +226,41 @@ function ESP.Init(Client)
 	stroke.Transparency = 0.4
 
 	local title = Instance.new("TextLabel",frame)
-	title.Size = UDim2.new(1,0,0,30)
+	title.Size = UDim2.new(1,0,0,22)
 	title.BackgroundTransparency = 1
 	title.Text = "ESP"
 	title.Font = Enum.Font.Code
-	title.TextSize = 16
+	title.TextSize = 13
 	title.TextColor3 = Theme.TEXT
 
 	local scroll = Instance.new("ScrollingFrame",frame)
-	scroll.Position = UDim2.new(0,6,0,32)
-	scroll.Size = UDim2.new(1,-12,1,-38)
+	scroll.Position = UDim2.new(0,5,0,26)
+	scroll.Size = UDim2.new(1,-10,1,-30)
 	scroll.CanvasSize = UDim2.new(0,0,0,0)
-	scroll.ScrollBarThickness = 5
+	scroll.ScrollBarThickness = 3
 	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 
 	local layout = Instance.new("UIListLayout",scroll)
-	layout.Padding = UDim.new(0,16) -- ⬅ doubled spacing
+	layout.Padding = UDim.new(0,5)
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 	local pad = Instance.new("UIPadding",scroll)
-	pad.PaddingTop = UDim.new(0,12)    -- ⬅ doubled
-	pad.PaddingBottom = UDim.new(0,20) -- ⬅ doubled
+	pad.PaddingTop = UDim.new(0,4)
+	pad.PaddingBottom = UDim.new(0,6)
 
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 20)
+		scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 8)
 	end)
 
 	local function Button(txt)
 		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(1,-8,0,30)
+		b.Size = UDim2.new(1,-6,0,22)
 		b.BackgroundColor3 = Theme.BUTTON
 		b.Text = txt
 		b.Font = Enum.Font.Code
-		b.TextSize = 14
+		b.TextSize = 11
 		b.TextColor3 = Theme.TEXT_DIM
 		b.BorderSizePixel = 0
 		b.Parent = scroll
