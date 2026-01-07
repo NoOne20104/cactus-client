@@ -1,5 +1,5 @@
--- Cactus Client - ESP Module
--- Neon green, dev-style, modular, performance-safe
+-- Cactus Client - ESP Module v3
+-- Bottom / Top / Middle tracers, team colors, neon dev style
 
 local ESP = {}
 
@@ -17,17 +17,26 @@ function ESP.Init(Client)
     -- =========================
 
     local State = {
-        Enabled  = false,
-        Tracers  = true,
-        Boxes    = true,
-        Names    = true,
-        Distance = true,
-        TeamCheck = false
+        Enabled        = false,
+
+        BottomTracers  = true,
+        TopTracers     = false,
+        MiddleTracers  = false,
+
+        Boxes          = true,
+        Names          = true,
+        Distance       = true,
+
+        TeamColors     = true
     }
 
     local Objects = {}
 
-    local GREEN = Color3.fromRGB(0, 255, 140)
+    local COLORS = {
+        Enemy   = Color3.fromRGB(255, 60, 60),
+        Friendly= Color3.fromRGB(80, 140, 255),
+        Neutral = Color3.fromRGB(0, 255, 140)
+    }
 
     -- =========================
     -- Drawing factory
@@ -43,17 +52,13 @@ function ESP.Init(Client)
 
     local function CreateESP()
         return {
-            Tracer = New("Line", {
-                Thickness = 1.5,
-                Transparency = 1,
-                Color = GREEN,
-                Visible = false
-            }),
+            BottomTracer = New("Line", {Thickness=1.5,Transparency=1,Visible=false}),
+            TopTracer    = New("Line", {Thickness=1.5,Transparency=1,Visible=false}),
+            MidTracer    = New("Line", {Thickness=1.5,Transparency=1,Visible=false}),
 
             Box = New("Square", {
                 Thickness = 1.5,
                 Transparency = 1,
-                Color = GREEN,
                 Filled = false,
                 Visible = false
             }),
@@ -62,7 +67,6 @@ function ESP.Init(Client)
                 Size = 13,
                 Center = true,
                 Outline = true,
-                Color = GREEN,
                 Font = 2,
                 Visible = false
             }),
@@ -71,7 +75,6 @@ function ESP.Init(Client)
                 Size = 12,
                 Center = true,
                 Outline = true,
-                Color = GREEN,
                 Font = 2,
                 Visible = false
             })
@@ -93,8 +96,30 @@ function ESP.Init(Client)
     end
 
     -- =========================
-    -- Math helpers
+    -- Helpers
     -- =========================
+
+    local function ResolveColor(plr)
+        if not State.TeamColors then
+            return COLORS.Neutral
+        end
+
+        if plr.Team == nil or LocalPlayer.Team == nil then
+            return COLORS.Neutral
+        end
+
+        if plr.Team == LocalPlayer.Team then
+            return COLORS.Friendly
+        end
+
+        return COLORS.Enemy
+    end
+
+    local function Hide(set)
+        for _,obj in pairs(set) do
+            obj.Visible = false
+        end
+    end
 
     local function GetBoxSize(cf, size)
         local corners = {
@@ -120,12 +145,6 @@ function ESP.Init(Client)
         return Vector2.new(minX, minY), Vector2.new(maxX - minX, maxY - minY)
     end
 
-    local function Hide(set)
-        for _,obj in pairs(set) do
-            obj.Visible = false
-        end
-    end
-
     -- =========================
     -- Render loop
     -- =========================
@@ -139,21 +158,19 @@ function ESP.Init(Client)
             return
         end
 
-        local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        local screenBottom = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+        local screenTop    = Vector2.new(Camera.ViewportSize.X/2, 0)
+        local screenMid    = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
         for _,plr in ipairs(Players:GetPlayers()) do
             local set = Objects[plr]
             if set and plr.Character then
 
                 local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                local head = plr.Character:FindFirstChild("Head")
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
 
                 if hrp and hum and hum.Health > 0 then
-
-                    if State.TeamCheck and plr.Team == LocalPlayer.Team then
-                        Hide(set)
-                        continue
-                    end
 
                     local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                     if not onScreen then
@@ -161,15 +178,46 @@ function ESP.Init(Client)
                         continue
                     end
 
+                    local color = ResolveColor(plr)
                     local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-                    -- Tracer
-                    if State.Tracers then
-                        set.Tracer.From = screenBottom
-                        set.Tracer.To = Vector2.new(pos.X, pos.Y)
-                        set.Tracer.Visible = true
+                    -- apply color to all
+                    for _,obj in pairs(set) do
+                        if obj.Color ~= nil then
+                            obj.Color = color
+                        end
+                    end
+
+                    -- Bottom tracer
+                    if State.BottomTracers then
+                        set.BottomTracer.From = screenBottom
+                        set.BottomTracer.To = Vector2.new(pos.X, pos.Y)
+                        set.BottomTracer.Visible = true
                     else
-                        set.Tracer.Visible = false
+                        set.BottomTracer.Visible = false
+                    end
+
+                    -- Top tracer
+                    if State.TopTracers then
+                        set.TopTracer.From = screenTop
+                        set.TopTracer.To = Vector2.new(pos.X, pos.Y)
+                        set.TopTracer.Visible = true
+                    else
+                        set.TopTracer.Visible = false
+                    end
+
+                    -- Middle tracer (from head)
+                    if State.MiddleTracers and head then
+                        local hpos, hon = Camera:WorldToViewportPoint(head.Position)
+                        if hon then
+                            set.MidTracer.From = screenMid
+                            set.MidTracer.To = Vector2.new(hpos.X, hpos.Y)
+                            set.MidTracer.Visible = true
+                        else
+                            set.MidTracer.Visible = false
+                        end
+                    else
+                        set.MidTracer.Visible = false
                     end
 
                     -- Box
@@ -185,7 +233,7 @@ function ESP.Init(Client)
                     -- Name
                     if State.Names then
                         set.Name.Text = plr.Name
-                        set.Name.Position = Vector2.new(pos.X, pos.Y - 30)
+                        set.Name.Position = Vector2.new(pos.X, pos.Y - 32)
                         set.Name.Visible = true
                     else
                         set.Name.Visible = false
@@ -194,7 +242,7 @@ function ESP.Init(Client)
                     -- Distance
                     if State.Distance then
                         set.Dist.Text = string.format("[%.0fm]", dist)
-                        set.Dist.Position = Vector2.new(pos.X, pos.Y - 16)
+                        set.Dist.Position = Vector2.new(pos.X, pos.Y - 18)
                         set.Dist.Visible = true
                     else
                         set.Dist.Visible = false
@@ -219,11 +267,11 @@ function ESP.Init(Client)
     Players.PlayerRemoving:Connect(Remove)
 
     -- =========================
-    -- UI (Waypoints-style)
+    -- UI (Cactus style)
     -- =========================
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 230, 0, 260)
+    frame.Size = UDim2.new(0, 240, 0, 360)
     frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
     frame.BorderSizePixel = 0
     frame.Parent = Page
@@ -257,11 +305,14 @@ function ESP.Init(Client)
         return b
     end
 
-    local espBtn     = Button("ESP: OFF", 40)
-    local tracerBtn  = Button("Tracers: ON", 75)
-    local boxBtn     = Button("Boxes: ON", 110)
-    local nameBtn    = Button("Names: ON", 145)
-    local distBtn    = Button("Distance: ON", 180)
+    local espBtn    = Button("ESP: OFF", 40)
+    local botBtn    = Button("Bottom Tracers: ON", 75)
+    local topBtn    = Button("Top Tracers: OFF", 110)
+    local midBtn    = Button("Middle Tracers: OFF", 145)
+    local boxBtn    = Button("Boxes: ON", 180)
+    local nameBtn   = Button("Names: ON", 215)
+    local distBtn   = Button("Distance: ON", 250)
+    local teamBtn   = Button("Team Colors: ON", 285)
 
     -- =========================
     -- UI logic
@@ -272,9 +323,19 @@ function ESP.Init(Client)
         espBtn.Text = State.Enabled and "ESP: ON" or "ESP: OFF"
     end)
 
-    tracerBtn.MouseButton1Click:Connect(function()
-        State.Tracers = not State.Tracers
-        tracerBtn.Text = State.Tracers and "Tracers: ON" or "Tracers: OFF"
+    botBtn.MouseButton1Click:Connect(function()
+        State.BottomTracers = not State.BottomTracers
+        botBtn.Text = State.BottomTracers and "Bottom Tracers: ON" or "Bottom Tracers: OFF"
+    end)
+
+    topBtn.MouseButton1Click:Connect(function()
+        State.TopTracers = not State.TopTracers
+        topBtn.Text = State.TopTracers and "Top Tracers: ON" or "Top Tracers: OFF"
+    end)
+
+    midBtn.MouseButton1Click:Connect(function()
+        State.MiddleTracers = not State.MiddleTracers
+        midBtn.Text = State.MiddleTracers and "Middle Tracers: ON" or "Middle Tracers: OFF"
     end)
 
     boxBtn.MouseButton1Click:Connect(function()
@@ -292,6 +353,12 @@ function ESP.Init(Client)
         distBtn.Text = State.Distance and "Distance: ON" or "Distance: OFF"
     end)
 
+    teamBtn.MouseButton1Click:Connect(function()
+        State.TeamColors = not State.TeamColors
+        teamBtn.Text = State.TeamColors and "Team Colors: ON" or "Team Colors: OFF"
+    end)
+
 end
 
 return ESP
+
