@@ -1,9 +1,13 @@
--- Cactus Client - ESP Module v3
--- Bottom / Top / Middle tracers, team colors, neon dev style
+-- Cactus Client - ESP Module v4
+-- Modular ESP system with multi-tracers, team colors, scrollable dev GUI
 
 local ESP = {}
 
 function ESP.Init(Client)
+
+    -- =========================
+    -- Services / Core
+    -- =========================
 
     local Players     = Client.Services.Players
     local RunService  = Client.Services.RunService
@@ -33,9 +37,9 @@ function ESP.Init(Client)
     local Objects = {}
 
     local COLORS = {
-        Enemy   = Color3.fromRGB(255, 60, 60),
-        Friendly= Color3.fromRGB(80, 140, 255),
-        Neutral = Color3.fromRGB(0, 255, 140)
+        Enemy    = Color3.fromRGB(255, 70, 70),
+        Friendly = Color3.fromRGB(90, 140, 255),
+        Neutral  = Color3.fromRGB(0, 255, 140)
     }
 
     -- =========================
@@ -52,34 +56,20 @@ function ESP.Init(Client)
 
     local function CreateESP()
         return {
-            BottomTracer = New("Line", {Thickness=1.5,Transparency=1,Visible=false}),
-            TopTracer    = New("Line", {Thickness=1.5,Transparency=1,Visible=false}),
-            MidTracer    = New("Line", {Thickness=1.5,Transparency=1,Visible=false}),
+            BottomTracer = New("Line", {Thickness=1.5, Transparency=1, Visible=false}),
+            TopTracer    = New("Line", {Thickness=1.5, Transparency=1, Visible=false}),
+            MidTracer    = New("Line", {Thickness=1.5, Transparency=1, Visible=false}),
 
-            Box = New("Square", {
-                Thickness = 1.5,
-                Transparency = 1,
-                Filled = false,
-                Visible = false
-            }),
+            Box = New("Square", {Thickness=1.5, Transparency=1, Filled=false, Visible=false}),
 
-            Name = New("Text", {
-                Size = 13,
-                Center = true,
-                Outline = true,
-                Font = 2,
-                Visible = false
-            }),
-
-            Dist = New("Text", {
-                Size = 12,
-                Center = true,
-                Outline = true,
-                Font = 2,
-                Visible = false
-            })
+            Name = New("Text", {Size=13, Center=true, Outline=true, Font=2, Visible=false}),
+            Dist = New("Text", {Size=12, Center=true, Outline=true, Font=2, Visible=false})
         }
     end
+
+    -- =========================
+    -- Player lifecycle
+    -- =========================
 
     local function Remove(plr)
         if Objects[plr] then
@@ -95,6 +85,13 @@ function ESP.Init(Client)
         Objects[plr] = CreateESP()
     end
 
+    for _,plr in ipairs(Players:GetPlayers()) do
+        Setup(plr)
+    end
+
+    Players.PlayerAdded:Connect(Setup)
+    Players.PlayerRemoving:Connect(Remove)
+
     -- =========================
     -- Helpers
     -- =========================
@@ -104,7 +101,7 @@ function ESP.Init(Client)
             return COLORS.Neutral
         end
 
-        if plr.Team == nil or LocalPlayer.Team == nil then
+        if not plr.Team or not LocalPlayer.Team then
             return COLORS.Neutral
         end
 
@@ -166,9 +163,9 @@ function ESP.Init(Client)
             local set = Objects[plr]
             if set and plr.Character then
 
-                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                local hrp  = plr.Character:FindFirstChild("HumanoidRootPart")
                 local head = plr.Character:FindFirstChild("Head")
-                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                local hum  = plr.Character:FindFirstChildOfClass("Humanoid")
 
                 if hrp and hum and hum.Health > 0 then
 
@@ -179,74 +176,59 @@ function ESP.Init(Client)
                     end
 
                     local color = ResolveColor(plr)
-                    local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+                    local dist  = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-                    -- apply color to all
                     for _,obj in pairs(set) do
                         if obj.Color ~= nil then
                             obj.Color = color
                         end
                     end
 
-                    -- Bottom tracer
+                    -- bottom tracer
                     if State.BottomTracers then
                         set.BottomTracer.From = screenBottom
-                        set.BottomTracer.To = Vector2.new(pos.X, pos.Y)
+                        set.BottomTracer.To   = Vector2.new(pos.X, pos.Y)
                         set.BottomTracer.Visible = true
-                    else
-                        set.BottomTracer.Visible = false
-                    end
+                    else set.BottomTracer.Visible = false end
 
-                    -- Top tracer
+                    -- top tracer
                     if State.TopTracers then
                         set.TopTracer.From = screenTop
-                        set.TopTracer.To = Vector2.new(pos.X, pos.Y)
+                        set.TopTracer.To   = Vector2.new(pos.X, pos.Y)
                         set.TopTracer.Visible = true
-                    else
-                        set.TopTracer.Visible = false
-                    end
+                    else set.TopTracer.Visible = false end
 
-                    -- Middle tracer (from head)
+                    -- middle tracer (head)
                     if State.MiddleTracers and head then
                         local hpos, hon = Camera:WorldToViewportPoint(head.Position)
                         if hon then
                             set.MidTracer.From = screenMid
-                            set.MidTracer.To = Vector2.new(hpos.X, hpos.Y)
+                            set.MidTracer.To   = Vector2.new(hpos.X, hpos.Y)
                             set.MidTracer.Visible = true
-                        else
-                            set.MidTracer.Visible = false
-                        end
-                    else
-                        set.MidTracer.Visible = false
-                    end
+                        else set.MidTracer.Visible = false end
+                    else set.MidTracer.Visible = false end
 
-                    -- Box
+                    -- box
                     if State.Boxes then
-                        local topLeft, size = GetBoxSize(hrp.CFrame, Vector3.new(2,3,0))
-                        set.Box.Position = topLeft
-                        set.Box.Size = size
-                        set.Box.Visible = true
-                    else
-                        set.Box.Visible = false
-                    end
+                        local tl, size = GetBoxSize(hrp.CFrame, Vector3.new(2,3,0))
+                        set.Box.Position = tl
+                        set.Box.Size     = size
+                        set.Box.Visible  = true
+                    else set.Box.Visible = false end
 
-                    -- Name
+                    -- name
                     if State.Names then
                         set.Name.Text = plr.Name
                         set.Name.Position = Vector2.new(pos.X, pos.Y - 32)
                         set.Name.Visible = true
-                    else
-                        set.Name.Visible = false
-                    end
+                    else set.Name.Visible = false end
 
-                    -- Distance
+                    -- distance
                     if State.Distance then
                         set.Dist.Text = string.format("[%.0fm]", dist)
                         set.Dist.Position = Vector2.new(pos.X, pos.Y - 18)
                         set.Dist.Visible = true
-                    else
-                        set.Dist.Visible = false
-                    end
+                    else set.Dist.Visible = false end
 
                 else
                     Hide(set)
@@ -256,22 +238,11 @@ function ESP.Init(Client)
     end)
 
     -- =========================
-    -- Player handling
-    -- =========================
-
-    for _,plr in ipairs(Players:GetPlayers()) do
-        Setup(plr)
-    end
-
-    Players.PlayerAdded:Connect(Setup)
-    Players.PlayerRemoving:Connect(Remove)
-
-    -- =========================
-    -- UI (Cactus style)
+    -- UI (scrollable cactus panel)
     -- =========================
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 240, 0, 360)
+    frame.Size = UDim2.new(0, 240, 0, 300)
     frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
     frame.BorderSizePixel = 0
     frame.Parent = Page
@@ -290,29 +261,52 @@ function ESP.Init(Client)
     title.TextColor3 = Theme.TEXT
     title.Parent = frame
 
-    local function Button(text, y)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1,-10,1,-40)
+    scroll.Position = UDim2.new(0,5,0,35)
+    scroll.CanvasSize = UDim2.new(0,0,0,0)
+    scroll.ScrollBarThickness = 4
+    scroll.ScrollBarImageTransparency = 0.2
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.Parent = frame
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0,8)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.Parent = scroll
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0,6)
+    pad.PaddingBottom = UDim.new(0,10)
+    pad.Parent = scroll
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 8)
+    end)
+
+    local function Button(text)
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(1,-20,0,30)
-        b.Position = UDim2.new(0,10,0,y)
+        b.Size = UDim2.new(1,-10,0,30)
         b.BackgroundColor3 = Theme.BUTTON
         b.Text = text
         b.Font = Enum.Font.Code
         b.TextSize = 14
         b.TextColor3 = Theme.TEXT_DIM
         b.BorderSizePixel = 0
-        b.Parent = frame
+        b.Parent = scroll
         Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
         return b
     end
 
-    local espBtn    = Button("ESP: OFF", 40)
-    local botBtn    = Button("Bottom Tracers: ON", 75)
-    local topBtn    = Button("Top Tracers: OFF", 110)
-    local midBtn    = Button("Middle Tracers: OFF", 145)
-    local boxBtn    = Button("Boxes: ON", 180)
-    local nameBtn   = Button("Names: ON", 215)
-    local distBtn   = Button("Distance: ON", 250)
-    local teamBtn   = Button("Team Colors: ON", 285)
+    local espBtn  = Button("ESP: OFF")
+    local botBtn  = Button("Bottom Tracers: ON")
+    local topBtn  = Button("Top Tracers: OFF")
+    local midBtn  = Button("Middle Tracers: OFF")
+    local boxBtn  = Button("Boxes: ON")
+    local nameBtn = Button("Names: ON")
+    local distBtn = Button("Distance: ON")
+    local teamBtn = Button("Team Colors: ON")
 
     -- =========================
     -- UI logic
