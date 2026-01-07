@@ -118,17 +118,13 @@ function Dev.Init(Client)
         end
 
         -- world
-worldLabel.Text =
-    "World\n" ..
-    "Players: " .. #Players:GetPlayers() .. "\n" ..
-    "Gravity: " .. workspace.Gravity
+        worldLabel.Text =
+            "World\n" ..
+            "Players: " .. #Players:GetPlayers() .. "\n" ..
+            "Gravity: " .. workspace.Gravity
+    end)
 
---  NoClip telemetry (added)
-local nc = Client.State.NoClip
-if nc then
-    worldLabel.Text = worldLabel.Text ..
-        "\n\nNoClip\n" ..
-        "Enabled: " .. tostring(nc.Enabled) .. "\n" ..
-        "Parts: " .. tostring(nc.PartsAffected)
 end
-end)
+
+return Dev
+
