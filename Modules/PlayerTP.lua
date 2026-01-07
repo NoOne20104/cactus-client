@@ -131,9 +131,9 @@ Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0,8)
     dropdown.Visible = not dropdown.Visible
 
     dropdown.Position = UDim2.new(
-        0, 10,
-        0, selectBtn.Position.Y.Offset + selectBtn.Size.Y.Offset + 6
-    )
+    0, 10,
+    0, selectBtn.Position.Y.Offset + selectBtn.Size.Y.Offset + 2
+)
 
     rebuildList()
 end)
