@@ -197,7 +197,7 @@ local function createGUI()
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
 	local stroke = Instance.new("UIStroke", frame)
-	stroke.Color = Theme.STROKE
+	stroke.Color = Color3.fromRGB(80,120,255)
 	stroke.Transparency = 0.4
 
 	-- title
@@ -254,7 +254,7 @@ local function createGUI()
 	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
 
 	local dStroke = Instance.new("UIStroke", dropdown)
-	dStroke.Color = Theme.STROKE
+	dStroke.Color = Color3.fromRGB(80,120,255)
 	dStroke.Transparency = 0.4
 
 	local list = Instance.new("ScrollingFrame")
