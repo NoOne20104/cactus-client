@@ -197,8 +197,8 @@ local function createGUI()
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
 	local stroke = Instance.new("UIStroke", frame)
-	stroke.Color = Color3.fromRGB(80,120,255)
-	stroke.Transparency = 0.4
+stroke.Color = Theme.STROKE
+stroke.Transparency = 0.4
 
 	-- title
 	local title = Instance.new("TextLabel")
