@@ -6,7 +6,7 @@ function PlayerTP.Init(Client)
 
     local Players = Client.Services.Players
     local LocalPlayer = Client.Player
-    local Page = Client.Pages.PlayerTP
+    local Page = Client.Pages.Teleport
     local Theme = Client.Theme
 
     local selectedPlayer = nil
