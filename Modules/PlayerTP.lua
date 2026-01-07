@@ -70,13 +70,13 @@ function PlayerTP.Init(Client)
     -- =========================
 
     local dropdown = Instance.new("Frame")
-    dropdown.Visible = false
-    dropdown.Size = UDim2.new(1,-20,0,140)
-    dropdown.Position = UDim2.new(0,10,0,138)
-    dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
-    dropdown.BorderSizePixel = 0
-    dropdown.Parent = frame
-    Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0,8)
+dropdown.Visible = false
+dropdown.Size = UDim2.new(1, -20, 0, 140)
+dropdown.Position = UDim2.new(0, 10, 0, 0) -- temp, will be set when opening
+dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
+dropdown.BorderSizePixel = 0
+dropdown.Parent = frame
+Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0,8)
 
     local dStroke = Instance.new("UIStroke", dropdown)
     dStroke.Color = Theme.STROKE
@@ -128,9 +128,15 @@ function PlayerTP.Init(Client)
     -- =========================
 
     selectBtn.MouseButton1Click:Connect(function()
-        dropdown.Visible = not dropdown.Visible
-        rebuildList()
-    end)
+    dropdown.Visible = not dropdown.Visible
+
+    dropdown.Position = UDim2.new(
+        0, 10,
+        0, selectBtn.Position.Y.Offset + selectBtn.Size.Y.Offset + 6
+    )
+
+    rebuildList()
+end)
 
     tpBtn.MouseButton1Click:Connect(function()
         if not selectedPlayer then return end
