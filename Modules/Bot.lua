@@ -245,13 +245,13 @@ stroke.Transparency = 0.4
 	selectedLabel.Parent = frame
 
 	-- dropdown
-	local dropdown = Instance.new("Frame")
-	dropdown.Visible = false
-	dropdown.Size = UDim2.new(0, 220, 0, 160)
-	dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
-	dropdown.BorderSizePixel = 0
-	dropdown.Parent = Page
-	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
+local dropdown = Instance.new("Frame")
+dropdown.Visible = false
+dropdown.Size = UDim2.new(0, 190, 0, 160) -- was 220, now slightly thinner
+dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
+dropdown.BorderSizePixel = 0
+dropdown.Parent = Page
+Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
 
 	local dStroke = Instance.new("UIStroke", dropdown)
 dStroke.Color = Theme.STROKE
