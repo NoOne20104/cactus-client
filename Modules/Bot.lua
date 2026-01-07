@@ -250,7 +250,7 @@ stroke.Transparency = 0.4
 	dropdown.Size = UDim2.new(0, 220, 0, 160)
 	dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	dropdown.BorderSizePixel = 0
-	dropdown.Parent = Page
+	dropdown.Parent = frame
 	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
 
 	local dStroke = Instance.new("UIStroke", dropdown)
@@ -299,12 +299,15 @@ dStroke.Transparency = 0.4
 	end
 
 	local function openDropdown(btn)
-		dropdown.Visible = not dropdown.Visible
-		local pos = btn.AbsolutePosition
-		local size = btn.AbsoluteSize
-		dropdown.Position = UDim2.fromOffset(pos.X, pos.Y + size.Y + 6)
-		rebuildList()
-	end
+	dropdown.Visible = not dropdown.Visible
+	dropdown.Position = UDim2.new(
+		btn.Position.X.Scale,
+		btn.Position.X.Offset,
+		btn.Position.Y.Scale,
+		btn.Position.Y.Offset + btn.Size.Y.Offset + 6
+	)
+	rebuildList()
+end
 
 	-- wiring (unchanged logic)
 	selectBtn.MouseButton1Click:Connect(function()
