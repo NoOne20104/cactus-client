@@ -254,8 +254,8 @@ stroke.Transparency = 0.4
 	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
 
 	local dStroke = Instance.new("UIStroke", dropdown)
-	dStroke.Color = Color3.fromRGB(80,120,255)
-	dStroke.Transparency = 0.4
+dStroke.Color = Theme.STROKE
+dStroke.Transparency = 0.4
 
 	local list = Instance.new("ScrollingFrame")
 	list.Size = UDim2.new(1, -10, 1, -10)
