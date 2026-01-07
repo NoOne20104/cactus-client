@@ -177,68 +177,89 @@ local function mainLoop()
 		end
 	end
 end
-
+	
 -- =========================
--- GUI
+-- GUI (Waypoints style)
 -- =========================
 
 local function createGUI()
 
-	local gui = Instance.new("Frame")
-	gui.Size = UDim2.fromScale(1,1)
-	gui.BackgroundTransparency = 1
-	gui.Parent = Client.Pages.Bot
+	local Page = Client.Pages.Bot
+	local Theme = Client.Theme
 
-	local frame = Instance.new("Frame", gui)
-	frame.Size = UDim2.fromScale(0.32, 0.32)
-	frame.Position = UDim2.fromScale(0.03, 0.05)
-	frame.BackgroundColor3 = Color3.fromRGB(22, 24, 35)
+	-- main panel
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 220, 0, 200)
+	frame.Position = UDim2.new(0, 10, 0, 10)
+	frame.BackgroundColor3 = Theme.BG
 	frame.BorderSizePixel = 0
-	Instance.new("UICorner", frame)
+	frame.Parent = Page
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
 	local stroke = Instance.new("UIStroke", frame)
-	stroke.Color = Color3.fromRGB(80, 120, 255)
+	stroke.Color = Theme.STROKE
+	stroke.Transparency = 0.4
 
-	local function makeButton(text, y, color)
-		local btn = Instance.new("TextButton", frame)
-		btn.Size = UDim2.fromScale(0.9, 0.18)
-		btn.Position = UDim2.fromScale(0.05, y)
-		btn.Text = text
-		btn.Font = Enum.Font.GothamBold
-		btn.TextScaled = true
-		btn.TextColor3 = Color3.new(1,1,1)
-		btn.BackgroundColor3 = color
-		btn.BorderSizePixel = 0
-		Instance.new("UICorner", btn)
-		return btn
+	-- title
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -10, 0, 28)
+	title.Position = UDim2.new(0, 10, 0, 4)
+	title.BackgroundTransparency = 1
+	title.Text = "Bot"
+	title.Font = Enum.Font.Code
+	title.TextSize = 16
+	title.TextXAlignment = Left
+	title.TextColor3 = Theme.TEXT
+	title.Parent = frame
+
+	-- button helper (identical style to Waypoints)
+	local function makeButton(text, y)
+		local b = Instance.new("TextButton")
+		b.Size = UDim2.new(1, -20, 0, 30)
+		b.Position = UDim2.new(0, 10, 0, y)
+		b.BackgroundColor3 = Theme.BUTTON
+		b.Text = text
+		b.Font = Enum.Font.Code
+		b.TextSize = 14
+		b.TextColor3 = Theme.TEXT_DIM
+		b.BorderSizePixel = 0
+		b.Parent = frame
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+		return b
 	end
 
-	local selectBtn = makeButton("SELECT PLAYER", 0.05, Color3.fromRGB(70,180,90))
-	local gotoBtn   = makeButton("GOTO",          0.28, Color3.fromRGB(70,110,255))
-	local followBtn = makeButton("FOLLOW",        0.51, Color3.fromRGB(120,90,255))
-	local stopBtn   = makeButton("STOP",          0.74, Color3.fromRGB(180,70,70))
+	local selectBtn = makeButton("Select Player", 36)
+	local gotoBtn   = makeButton("Goto Target", 72)
+	local followBtn = makeButton("Follow Target", 108)
+	local stopBtn   = makeButton("Stop", 144)
 
-	local selectedLabel = Instance.new("TextLabel", frame)
-	selectedLabel.Size = UDim2.fromScale(1, 0.18)
-	selectedLabel.Position = UDim2.fromScale(0, 0.82)
-	selectedLabel.Text = "Target: none"
-	selectedLabel.TextScaled = true
-	selectedLabel.Font = Enum.Font.Gotham
-	selectedLabel.TextColor3 = Color3.fromRGB(200,200,200)
+	local selectedLabel = Instance.new("TextLabel")
+	selectedLabel.Size = UDim2.new(1, -20, 0, 20)
+	selectedLabel.Position = UDim2.new(0, 10, 0, 176)
 	selectedLabel.BackgroundTransparency = 1
+	selectedLabel.Text = "Target: none"
+	selectedLabel.Font = Enum.Font.Code
+	selectedLabel.TextSize = 13
+	selectedLabel.TextXAlignment = Left
+	selectedLabel.TextColor3 = Theme.TEXT_DIM
+	selectedLabel.Parent = frame
 
-	local dropdown = Instance.new("Frame", gui)
+	-- dropdown
+	local dropdown = Instance.new("Frame")
 	dropdown.Visible = false
-	dropdown.Size = UDim2.fromScale(0.28, 0.38)
-	dropdown.BackgroundColor3 = Color3.fromRGB(18,18,28)
+	dropdown.Size = UDim2.new(0, 220, 0, 160)
+	dropdown.BackgroundColor3 = Theme.BG
 	dropdown.BorderSizePixel = 0
-	Instance.new("UICorner", dropdown)
+	dropdown.Parent = Page
+	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
 
-	local dropStroke = Instance.new("UIStroke", dropdown)
-	dropStroke.Color = Color3.fromRGB(80,120,255)
+	local dStroke = Instance.new("UIStroke", dropdown)
+	dStroke.Color = Theme.STROKE
+	dStroke.Transparency = 0.4
 
-	local list = Instance.new("ScrollingFrame", dropdown)
-	list.Size = UDim2.fromScale(1,1)
+	local list = Instance.new("ScrollingFrame")
+	list.Size = UDim2.new(1, -10, 1, -10)
+	list.Position = UDim2.new(0, 5, 0, 5)
 	list.CanvasSize = UDim2.new(0,0,0,0)
 	list.ScrollBarImageTransparency = 0.3
 	list.BackgroundTransparency = 1
@@ -254,15 +275,16 @@ local function createGUI()
 
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= LOCAL_PLAYER then
-				local btn = Instance.new("TextButton", list)
-				btn.Size = UDim2.new(1, -10, 0, 34)
+				local btn = Instance.new("TextButton")
+				btn.Size = UDim2.new(1,0,0,30)
 				btn.Text = plr.Name
-				btn.Font = Enum.Font.Gotham
-				btn.TextScaled = true
-				btn.TextColor3 = Color3.fromRGB(230,230,230)
-				btn.BackgroundColor3 = Color3.fromRGB(30,30,45)
+				btn.Font = Enum.Font.Code
+				btn.TextSize = 14
+				btn.TextColor3 = Theme.TEXT_DIM
+				btn.BackgroundColor3 = Theme.BUTTON
 				btn.BorderSizePixel = 0
-				Instance.new("UICorner", btn)
+				btn.Parent = list
+				Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
 				btn.MouseButton1Click:Connect(function()
 					selectedTargetPlayer = plr
@@ -273,7 +295,7 @@ local function createGUI()
 		end
 
 		task.wait()
-		list.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 10)
+		list.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 6)
 	end
 
 	local function openDropdown(btn)
@@ -284,6 +306,7 @@ local function createGUI()
 		rebuildList()
 	end
 
+	-- wiring (unchanged logic)
 	selectBtn.MouseButton1Click:Connect(function()
 		openDropdown(selectBtn)
 	end)
@@ -314,6 +337,7 @@ local function createGUI()
 		end
 	end)
 end
+
 
 -- =========================
 -- Boot
