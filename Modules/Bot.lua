@@ -208,7 +208,7 @@ local function createGUI()
 	title.Text = "Bot"
 	title.Font = Enum.Font.Code
 	title.TextSize = 16
-	title.TextXAlignment = Left
+	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.TextColor3 = Theme.TEXT
 	title.Parent = frame
 
@@ -240,7 +240,7 @@ local function createGUI()
 	selectedLabel.Text = "Target: none"
 	selectedLabel.Font = Enum.Font.Code
 	selectedLabel.TextSize = 13
-	selectedLabel.TextXAlignment = Left
+	selectedLabel.TextXAlignment = Enum.TextXAlignment.Left
 	selectedLabel.TextColor3 = Theme.TEXT_DIM
 	selectedLabel.Parent = frame
 
