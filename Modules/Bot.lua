@@ -191,7 +191,7 @@ local function createGUI()
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(0, 220, 0, 200)
 	frame.Position = UDim2.new(0, 10, 0, 10)
-	frame.BackgroundColor3 = Theme.BG
+	frame.BackgroundColor3 = Theme.BACKGROUND
 	frame.BorderSizePixel = 0
 	frame.Parent = Page
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
@@ -248,7 +248,7 @@ local function createGUI()
 	local dropdown = Instance.new("Frame")
 	dropdown.Visible = false
 	dropdown.Size = UDim2.new(0, 220, 0, 160)
-	dropdown.BackgroundColor3 = Theme.BG
+	dropdown.BackgroundColor3 = Theme.BACKGROUND
 	dropdown.BorderSizePixel = 0
 	dropdown.Parent = Page
 	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
