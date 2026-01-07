@@ -1,4 +1,4 @@
--- Cactus Client - ESP Module (Clean Rewrite)
+-- Cactus Client - ESP Module (Clean Rewrite, spacing x2)
 -- Multi-tracer ESP with team colors and guaranteed scroll UI
 
 local ESP = {}
@@ -211,7 +211,7 @@ function ESP.Init(Client)
 	end)
 
 	-- =========================
-	-- UI (guaranteed scroll)
+	-- UI (guaranteed scroll, spacing x2)
 	-- =========================
 
 	local frame = Instance.new("Frame")
@@ -243,15 +243,15 @@ function ESP.Init(Client)
 	scroll.BorderSizePixel = 0
 
 	local layout = Instance.new("UIListLayout",scroll)
-	layout.Padding = UDim.new(0,8)
+	layout.Padding = UDim.new(0,16) -- ⬅ doubled spacing
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 	local pad = Instance.new("UIPadding",scroll)
-	pad.PaddingTop = UDim.new(0,6)
-	pad.PaddingBottom = UDim.new(0,10)
+	pad.PaddingTop = UDim.new(0,12)    -- ⬅ doubled
+	pad.PaddingBottom = UDim.new(0,20) -- ⬅ doubled
 
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 12)
+		scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 20)
 	end)
 
 	local function Button(txt)
@@ -324,5 +324,3 @@ function ESP.Init(Client)
 end
 
 return ESP
-
-
