@@ -1,326 +1,341 @@
--- Cactus Client - ESP Module (Compact UI Rewrite)
--- Multi-tracer ESP with team colors and compact scroll UI
+-- Cactus Client - ESP Module (Fresh Build)
+-- Clean overlay system, compact dev UI, modular core
 
 local ESP = {}
 
 function ESP.Init(Client)
 
-	-- =========================
-	-- Core
-	-- =========================
+    -- =========================
+    -- Core
+    -- =========================
 
-	local Players     = Client.Services.Players
-	local RunService  = Client.Services.RunService
-	local LocalPlayer = Client.Player
-	local Page        = Client.Pages.ESP
-	local Theme       = Client.Theme
-	local Camera      = workspace.CurrentCamera
+    local Players     = Client.Services.Players
+    local RunService  = Client.Services.RunService
+    local LocalPlayer = Client.Player
+    local Page        = Client.Pages.ESP
+    local Theme       = Client.Theme
+    local Camera      = workspace.CurrentCamera
 
-	-- =========================
-	-- State
-	-- =========================
+    -- =========================
+    -- Config / State
+    -- =========================
 
-	local State = {
-		Enabled = false,
+    local Config = {
+        Enabled = false,
 
-		BottomTracers = true,
-		TopTracers    = false,
-		MiddleTracers = false,
+        TracerBottom = true,
+        TracerTop    = false,
+        TracerMiddle = false,
 
-		Boxes    = true,
-		Names    = true,
-		Distance = true,
+        Boxes    = true,
+        Names    = true,
+        Distance = true,
 
-		TeamColors = true
-	}
+        TeamColors = true
+    }
 
-	local Objects = {}
+    local Registry = {}
 
-	local COLORS = {
-		Enemy    = Color3.fromRGB(255, 70, 70),
-		Friendly = Color3.fromRGB(80, 140, 255),
-		Neutral  = Color3.fromRGB(0, 255, 140)
-	}
+    local COLORS = {
+        Enemy    = Color3.fromRGB(255, 80, 80),
+        Friendly = Color3.fromRGB(90, 140, 255),
+        Neutral  = Color3.fromRGB(0, 255, 140)
+    }
 
-	-- =========================
-	-- Drawing factory
-	-- =========================
+    -- =========================
+    -- Drawing layer
+    -- =========================
 
-	local function New(t, props)
-		local o = Drawing.new(t)
-		for k,v in pairs(props) do
-			o[k] = v
-		end
-		return o
-	end
+    local function Draw(kind, props)
+        local obj = Drawing.new(kind)
+        for k,v in pairs(props) do
+            obj[k] = v
+        end
+        return obj
+    end
 
-	local function NewSet()
-		return {
-			Bottom = New("Line",   {Thickness=1.2,Transparency=1,Visible=false}),
-			Top    = New("Line",   {Thickness=1.2,Transparency=1,Visible=false}),
-			Middle = New("Line",   {Thickness=1.2,Transparency=1,Visible=false}),
-			Box    = New("Square",{Thickness=1.2,Transparency=1,Filled=false,Visible=false}),
-			Name   = New("Text",  {Size=12,Center=true,Outline=true,Font=2,Visible=false}),
-			Dist   = New("Text",  {Size=11,Center=true,Outline=true,Font=2,Visible=false})
-		}
-	end
+    local function NewBundle()
+        return {
+            TBottom = Draw("Line",{Thickness=1.2,Transparency=1,Visible=false}),
+            TTop    = Draw("Line",{Thickness=1.2,Transparency=1,Visible=false}),
+            TMid    = Draw("Line",{Thickness=1.2,Transparency=1,Visible=false}),
+            Box     = Draw("Square",{Thickness=1.2,Transparency=1,Filled=false,Visible=false}),
+            Name    = Draw("Text",{Size=12,Center=true,Outline=true,Font=2,Visible=false}),
+            Dist    = Draw("Text",{Size=11,Center=true,Outline=true,Font=2,Visible=false})
+        }
+    end
 
-	-- =========================
-	-- Player lifecycle
-	-- =========================
+    -- =========================
+    -- Player registry
+    -- =========================
 
-	local function Remove(plr)
-		if Objects[plr] then
-			for _,o in pairs(Objects[plr]) do
-				pcall(function() o:Remove() end)
-			end
-			Objects[plr] = nil
-		end
-	end
+    local function Register(plr)
+        if plr ~= LocalPlayer then
+            Registry[plr] = NewBundle()
+        end
+    end
 
-	local function Setup(plr)
-		if plr ~= LocalPlayer then
-			Objects[plr] = NewSet()
-		end
-	end
+    local function Unregister(plr)
+        local set = Registry[plr]
+        if set then
+            for _,obj in pairs(set) do
+                pcall(function() obj:Remove() end)
+            end
+            Registry[plr] = nil
+        end
+    end
 
-	for _,p in ipairs(Players:GetPlayers()) do Setup(p) end
-	Players.PlayerAdded:Connect(Setup)
-	Players.PlayerRemoving:Connect(Remove)
+    for _,p in ipairs(Players:GetPlayers()) do Register(p) end
+    Players.PlayerAdded:Connect(Register)
+    Players.PlayerRemoving:Connect(Unregister)
 
-	-- =========================
-	-- Helpers
-	-- =========================
+    -- =========================
+    -- Helpers
+    -- =========================
 
-	local function ColorFor(plr)
-		if not State.TeamColors then
-			return COLORS.Neutral
-		end
-		if not plr.Team or not LocalPlayer.Team then
-			return COLORS.Neutral
-		end
-		if plr.Team == LocalPlayer.Team then
-			return COLORS.Friendly
-		end
-		return COLORS.Enemy
-	end
+    local function GetColor(plr)
+        if not Config.TeamColors then
+            return COLORS.Neutral
+        end
+        if not plr.Team or not LocalPlayer.Team then
+            return COLORS.Neutral
+        end
+        if plr.Team == LocalPlayer.Team then
+            return COLORS.Friendly
+        end
+        return COLORS.Enemy
+    end
 
-	local function Hide(set)
-		for _,o in pairs(set) do o.Visible = false end
-	end
+    local function HideAll(set)
+        for _,o in pairs(set) do
+            o.Visible = false
+        end
+    end
 
-	local function GetBox(cf)
-		local size = Vector3.new(2,3,0)
-		local corners = {
-			cf * CFrame.new( size.X,  size.Y,0),
-			cf * CFrame.new(-size.X,  size.Y,0),
-			cf * CFrame.new( size.X, -size.Y,0),
-			cf * CFrame.new(-size.X, -size.Y,0)
-		}
+    local function ComputeBox(cf)
+        local size = Vector3.new(2,3,0)
+        local points = {
+            cf * CFrame.new( size.X,  size.Y,0),
+            cf * CFrame.new(-size.X,  size.Y,0),
+            cf * CFrame.new( size.X, -size.Y,0),
+            cf * CFrame.new(-size.X, -size.Y,0)
+        }
 
-		local minX,minY,maxX,maxY = 9e9,9e9,-9e9,-9e9
+        local minX,minY,maxX,maxY = 9e9,9e9,-9e9,-9e9
 
-		for _,c in ipairs(corners) do
-			local v,on = Camera:WorldToViewportPoint(c.Position)
-			if on then
-				minX = math.min(minX,v.X)
-				minY = math.min(minY,v.Y)
-				maxX = math.max(maxX,v.X)
-				maxY = math.max(maxY,v.Y)
-			end
-		end
+        for _,p in ipairs(points) do
+            local v,on = Camera:WorldToViewportPoint(p.Position)
+            if on then
+                minX = math.min(minX,v.X)
+                minY = math.min(minY,v.Y)
+                maxX = math.max(maxX,v.X)
+                maxY = math.max(maxY,v.Y)
+            end
+        end
 
-		return Vector2.new(minX,minY), Vector2.new(maxX-minX,maxY-minY)
-	end
+        return Vector2.new(minX,minY), Vector2.new(maxX-minX,maxY-minY)
+    end
 
-	-- =========================
-	-- Render
-	-- =========================
+    -- =========================
+    -- Render engine
+    -- =========================
 
-	RunService.RenderStepped:Connect(function()
+    RunService.RenderStepped:Connect(function()
 
-		if not State.Enabled then
-			for _,s in pairs(Objects) do Hide(s) end
-			return
-		end
+        if not Config.Enabled then
+            for _,set in pairs(Registry) do
+                HideAll(set)
+            end
+            return
+        end
 
-		local bottom = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-		local top    = Vector2.new(Camera.ViewportSize.X/2, 0)
-		local mid    = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+        local screenBottom = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+        local screenTop    = Vector2.new(Camera.ViewportSize.X/2, 0)
+        local screenMid    = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
-		for _,plr in ipairs(Players:GetPlayers()) do
-			local set = Objects[plr]
-			if set and plr.Character then
+        for _,plr in ipairs(Players:GetPlayers()) do
+            local set = Registry[plr]
+            if set and plr.Character then
 
-				local hrp  = plr.Character:FindFirstChild("HumanoidRootPart")
-				local head = plr.Character:FindFirstChild("Head")
-				local hum  = plr.Character:FindFirstChildOfClass("Humanoid")
+                local hrp  = plr.Character:FindFirstChild("HumanoidRootPart")
+                local head = plr.Character:FindFirstChild("Head")
+                local hum  = plr.Character:FindFirstChildOfClass("Humanoid")
 
-				if hrp and hum and hum.Health > 0 then
-					local pos,on = Camera:WorldToViewportPoint(hrp.Position)
-					if not on then Hide(set) continue end
+                if hrp and hum and hum.Health > 0 then
 
-					local col = ColorFor(plr)
-					local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+                    local pos,on = Camera:WorldToViewportPoint(hrp.Position)
+                    if not on then HideAll(set) continue end
 
-					for _,o in pairs(set) do if o.Color then o.Color = col end end
+                    local col = GetColor(plr)
+                    local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-					if State.BottomTracers then
-						set.Bottom.From = bottom
-						set.Bottom.To   = Vector2.new(pos.X,pos.Y)
-						set.Bottom.Visible = true
-					else set.Bottom.Visible=false end
+                    for _,o in pairs(set) do
+                        if o.Color then o.Color = col end
+                    end
 
-					if State.TopTracers then
-						set.Top.From = top
-						set.Top.To   = Vector2.new(pos.X,pos.Y)
-						set.Top.Visible = true
-					else set.Top.Visible=false end
+                    -- tracers
+                    if Config.TracerBottom then
+                        set.TBottom.From = screenBottom
+                        set.TBottom.To   = Vector2.new(pos.X,pos.Y)
+                        set.TBottom.Visible = true
+                    else set.TBottom.Visible=false end
 
-					if State.MiddleTracers and head then
-						local hpos,hon = Camera:WorldToViewportPoint(head.Position)
-						if hon then
-							set.Middle.From = mid
-							set.Middle.To   = Vector2.new(hpos.X,hpos.Y)
-							set.Middle.Visible = true
-						else set.Middle.Visible=false end
-					else set.Middle.Visible=false end
+                    if Config.TracerTop then
+                        set.TTop.From = screenTop
+                        set.TTop.To   = Vector2.new(pos.X,pos.Y)
+                        set.TTop.Visible = true
+                    else set.TTop.Visible=false end
 
-					if State.Boxes then
-						local tl,sz = GetBox(hrp.CFrame)
-						set.Box.Position = tl
-						set.Box.Size = sz
-						set.Box.Visible = true
-					else set.Box.Visible=false end
+                    if Config.TracerMiddle and head then
+                        local hpos,hon = Camera:WorldToViewportPoint(head.Position)
+                        if hon then
+                            set.TMid.From = screenMid
+                            set.TMid.To   = Vector2.new(hpos.X,hpos.Y)
+                            set.TMid.Visible = true
+                        else set.TMid.Visible=false end
+                    else set.TMid.Visible=false end
 
-					if State.Names then
-						set.Name.Text = plr.Name
-						set.Name.Position = Vector2.new(pos.X,pos.Y-30)
-						set.Name.Visible = true
-					else set.Name.Visible=false end
+                    -- box
+                    if Config.Boxes then
+                        local tl,sz = ComputeBox(hrp.CFrame)
+                        set.Box.Position = tl
+                        set.Box.Size = sz
+                        set.Box.Visible = true
+                    else set.Box.Visible=false end
 
-					if State.Distance then
-						set.Dist.Text = string.format("[%.0fm]",dist)
-						set.Dist.Position = Vector2.new(pos.X,pos.Y-16)
-						set.Dist.Visible = true
-					else set.Dist.Visible=false end
+                    -- name
+                    if Config.Names then
+                        set.Name.Text = plr.Name
+                        set.Name.Position = Vector2.new(pos.X,pos.Y-28)
+                        set.Name.Visible = true
+                    else set.Name.Visible=false end
 
-				else Hide(set) end
-			end
-		end
-	end)
+                    -- distance
+                    if Config.Distance then
+                        set.Dist.Text = string.format("[%.0fm]",dist)
+                        set.Dist.Position = Vector2.new(pos.X,pos.Y-15)
+                        set.Dist.Visible = true
+                    else set.Dist.Visible=false end
 
-	-- =========================
-	-- UI (compact cactus panel)
-	-- =========================
+                else
+                    HideAll(set)
+                end
+            end
+        end
+    end)
 
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0,190,0,210)
-	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
-	frame.BorderSizePixel = 0
-	frame.Parent = Page
-	Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
+    -- =========================
+    -- UI (fresh compact panel)
+    -- =========================
 
-	local stroke = Instance.new("UIStroke",frame)
-	stroke.Color = Theme.STROKE
-	stroke.Transparency = 0.4
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0,180,0,200)
+    frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
+    frame.BorderSizePixel = 0
+    frame.Parent = Page
+    Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
 
-	local title = Instance.new("TextLabel",frame)
-	title.Size = UDim2.new(1,0,0,22)
-	title.BackgroundTransparency = 1
-	title.Text = "ESP"
-	title.Font = Enum.Font.Code
-	title.TextSize = 13
-	title.TextColor3 = Theme.TEXT
+    local stroke = Instance.new("UIStroke",frame)
+    stroke.Color = Theme.STROKE
+    stroke.Transparency = 0.4
 
-	local scroll = Instance.new("ScrollingFrame",frame)
-	scroll.Position = UDim2.new(0,5,0,26)
-	scroll.Size = UDim2.new(1,-10,1,-30)
-	scroll.CanvasSize = UDim2.new(0,0,0,0)
-	scroll.ScrollBarThickness = 3
-	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-	scroll.BackgroundTransparency = 1
-	scroll.BorderSizePixel = 0
+    local title = Instance.new("TextLabel",frame)
+    title.Size = UDim2.new(1,0,0,20)
+    title.BackgroundTransparency = 1
+    title.Text = "ESP"
+    title.Font = Enum.Font.Code
+    title.TextSize = 13
+    title.TextColor3 = Theme.TEXT
 
-	local layout = Instance.new("UIListLayout",scroll)
-	layout.Padding = UDim.new(0,5)
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    local scroll = Instance.new("ScrollingFrame",frame)
+    scroll.Position = UDim2.new(0,5,0,24)
+    scroll.Size = UDim2.new(1,-10,1,-28)
+    scroll.CanvasSize = UDim2.new(0,0,0,0)
+    scroll.ScrollBarThickness = 3
+    scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
 
-	local pad = Instance.new("UIPadding",scroll)
-	pad.PaddingTop = UDim.new(0,4)
-	pad.PaddingBottom = UDim.new(0,6)
+    local layout = Instance.new("UIListLayout",scroll)
+    layout.Padding = UDim.new(0,5)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 8)
-	end)
+    local pad = Instance.new("UIPadding",scroll)
+    pad.PaddingTop = UDim.new(0,4)
+    pad.PaddingBottom = UDim.new(0,6)
 
-	local function Button(txt)
-		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(1,-6,0,22)
-		b.BackgroundColor3 = Theme.BUTTON
-		b.Text = txt
-		b.Font = Enum.Font.Code
-		b.TextSize = 11
-		b.TextColor3 = Theme.TEXT_DIM
-		b.BorderSizePixel = 0
-		b.Parent = scroll
-		Instance.new("UICorner",b).CornerRadius = UDim.new(0,6)
-		return b
-	end
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 8)
+    end)
 
-	local espBtn  = Button("ESP: OFF")
-	local bBtn    = Button("Bottom Tracers: ON")
-	local tBtn    = Button("Top Tracers: OFF")
-	local mBtn    = Button("Middle Tracers: OFF")
-	local boxBtn  = Button("Boxes: ON")
-	local nBtn    = Button("Names: ON")
-	local dBtn    = Button("Distance: ON")
-	local teamBtn = Button("Team Colors: ON")
+    local function Button(text)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(1,-6,0,22)
+        b.BackgroundColor3 = Theme.BUTTON
+        b.Text = text
+        b.Font = Enum.Font.Code
+        b.TextSize = 11
+        b.TextColor3 = Theme.TEXT_DIM
+        b.BorderSizePixel = 0
+        b.Parent = scroll
+        Instance.new("UICorner",b).CornerRadius = UDim.new(0,6)
+        return b
+    end
 
-	-- =========================
-	-- UI logic
-	-- =========================
+    local espBtn   = Button("ESP: OFF")
+    local btmBtn   = Button("Bottom Tracer: ON")
+    local topBtn   = Button("Top Tracer: OFF")
+    local midBtn   = Button("Middle Tracer: OFF")
+    local boxBtn   = Button("Boxes: ON")
+    local nameBtn  = Button("Names: ON")
+    local distBtn  = Button("Distance: ON")
+    local teamBtn  = Button("Team Colors: ON")
 
-	espBtn.MouseButton1Click:Connect(function()
-		State.Enabled = not State.Enabled
-		espBtn.Text = State.Enabled and "ESP: ON" or "ESP: OFF"
-	end)
+    -- =========================
+    -- UI logic
+    -- =========================
 
-	bBtn.MouseButton1Click:Connect(function()
-		State.BottomTracers = not State.BottomTracers
-		bBtn.Text = State.BottomTracers and "Bottom Tracers: ON" or "Bottom Tracers: OFF"
-	end)
+    espBtn.MouseButton1Click:Connect(function()
+        Config.Enabled = not Config.Enabled
+        espBtn.Text = Config.Enabled and "ESP: ON" or "ESP: OFF"
+    end)
 
-	tBtn.MouseButton1Click:Connect(function()
-		State.TopTracers = not State.TopTracers
-		tBtn.Text = State.TopTracers and "Top Tracers: ON" or "Top Tracers: OFF"
-	end)
+    btmBtn.MouseButton1Click:Connect(function()
+        Config.TracerBottom = not Config.TracerBottom
+        btmBtn.Text = Config.TracerBottom and "Bottom Tracer: ON" or "Bottom Tracer: OFF"
+    end)
 
-	mBtn.MouseButton1Click:Connect(function()
-		State.MiddleTracers = not State.MiddleTracers
-		mBtn.Text = State.MiddleTracers and "Middle Tracers: ON" or "Middle Tracers: OFF"
-	end)
+    topBtn.MouseButton1Click:Connect(function()
+        Config.TracerTop = not Config.TracerTop
+        topBtn.Text = Config.TracerTop and "Top Tracer: ON" or "Top Tracer: OFF"
+    end)
 
-	boxBtn.MouseButton1Click:Connect(function()
-		State.Boxes = not State.Boxes
-		boxBtn.Text = State.Boxes and "Boxes: ON" or "Boxes: OFF"
-	end)
+    midBtn.MouseButton1Click:Connect(function()
+        Config.TracerMiddle = not Config.TracerMiddle
+        midBtn.Text = Config.TracerMiddle and "Middle Tracer: ON" or "Middle Tracer: OFF"
+    end)
 
-	nBtn.MouseButton1Click:Connect(function()
-		State.Names = not State.Names
-		nBtn.Text = State.Names and "Names: ON" or "Names: OFF"
-	end)
+    boxBtn.MouseButton1Click:Connect(function()
+        Config.Boxes = not Config.Boxes
+        boxBtn.Text = Config.Boxes and "Boxes: ON" or "Boxes: OFF"
+    end)
 
-	dBtn.MouseButton1Click:Connect(function()
-		State.Distance = not State.Distance
-		dBtn.Text = State.Distance and "Distance: ON" or "Distance: OFF"
-	end)
+    nameBtn.MouseButton1Click:Connect(function()
+        Config.Names = not Config.Names
+        nameBtn.Text = Config.Names and "Names: ON" or "Names: OFF"
+    end)
 
-	teamBtn.MouseButton1Click:Connect(function()
-		State.TeamColors = not State.TeamColors
-		teamBtn.Text = State.TeamColors and "Team Colors: ON" or "Team Colors: OFF"
-	end)
+    distBtn.MouseButton1Click:Connect(function()
+        Config.Distance = not Config.Distance
+        distBtn.Text = Config.Distance and "Distance: ON" or "Distance: OFF"
+    end)
+
+    teamBtn.MouseButton1Click:Connect(function()
+        Config.TeamColors = not Config.TeamColors
+        teamBtn.Text = Config.TeamColors and "Team Colors: ON" or "Team Colors: OFF"
+    end)
 
 end
 
 return ESP
+
