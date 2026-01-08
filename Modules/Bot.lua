@@ -50,7 +50,7 @@ local function clearPathVisual()
 	end
 end
 
-	function Bot.GotoPosition(pos)
+function Bot.GotoPosition(pos)
 
 	-- if nil is passed, fully stop the bot
 	if pos == nil then
@@ -76,6 +76,8 @@ end
 	clearPathVisual()
 end
 
+
+	
 
 local function drawPathVisual(points)
 	clearPathVisual()
