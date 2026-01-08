@@ -20,7 +20,7 @@ function Waypoints.Init(Client)
 	-- =========================
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 220, 0, 205)
+	frame.Size = UDim2.new(0, 220, 0, 170)
 	frame.Position = UDim2.new(0, 10, 0, 10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -56,9 +56,9 @@ function Waypoints.Init(Client)
 	end
 
 	local setBtn = makeButton("Set Waypoint", 40)
-local tpBtn = makeButton("Teleport to Waypoint", 75)
-local walkBtn = makeButton("Walk to Waypoint", 110)
-local clearBtn = makeButton("Clear Waypoint", 145)
+	local tpBtn = makeButton("Teleport to Waypoint", 75)
+	local clearBtn = makeButton("Clear Waypoint", 110)
+
 	-- =========================
 	-- Marker
 	-- =========================
@@ -138,17 +138,7 @@ local clearBtn = makeButton("Clear Waypoint", 145)
 		hrp.CFrame = CFrame.new(waypointPos + Vector3.new(0,3,0))
 	end)
 
-walkBtn.MouseButton1Click:Connect(function()
-	if not waypointPos then return end
-	if not Client.Modules or not Client.Modules.Bot then return end
-
-	if Client.Modules.Bot.GotoPosition then
-		Client.Modules.Bot.GotoPosition(waypointPos)
-	else
-		warn("[Waypoints] Bot.GotoPosition not found")
-	end
-end)
-        	clearBtn.MouseButton1Click:Connect(function()
+	clearBtn.MouseButton1Click:Connect(function()
 		waypointPos = nil
 		State.Waypoint = nil
 		if camConn then camConn:Disconnect() camConn = nil end
