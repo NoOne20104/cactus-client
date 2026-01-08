@@ -1,6 +1,7 @@
 -- Reactive Walker v1.2 (Path Visual Rewrite)
 -- Goto + Follow with clean GUI (Cactus Client Module)
 -- + Smooth neon green path visualiser
+-- + Walk to Waypoint support
 
 local Bot = {}
 
@@ -27,6 +28,7 @@ local lastMoveTime = os.clock()
 
 -- target + mode
 local selectedTargetPlayer = nil
+local selectedTargetPosition = nil -- <<< NEW
 local currentMode = "idle"
 local lastFollowTargetPos = nil
 
@@ -85,6 +87,21 @@ local function drawPathVisual(points)
 end
 
 -- =========================
+-- Public API (Waypoints)
+-- =========================
+
+function Bot.GotoPosition(pos)
+	if typeof(pos) ~= "Vector3" then return end
+
+	selectedTargetPlayer = nil
+	selectedTargetPosition = pos
+	currentMode = "goto"
+	currentPath = nil
+	waypoints = nil
+	clearPathVisual()
+end
+
+-- =========================
 -- Character handling
 -- =========================
 
@@ -98,11 +115,20 @@ end
 -- Target handling
 -- =========================
 
-local function getTargetRoot()
-	if not selectedTargetPlayer then return end
-	local char = selectedTargetPlayer.Character
-	if not char then return end
-	return char:FindFirstChild("HumanoidRootPart")
+local function getTargetPosition()
+	if selectedTargetPlayer then
+		local char = selectedTargetPlayer.Character
+		if char then
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				return hrp.Position
+			end
+		end
+	end
+
+	if selectedTargetPosition then
+		return selectedTargetPosition
+	end
 end
 
 -- =========================
@@ -205,16 +231,16 @@ local function mainLoop()
 	while true do
 		task.wait(0.3)
 
-		local targetRoot = getTargetRoot()
-		if not targetRoot or currentMode == "idle" then continue end
+		local targetPos = getTargetPosition()
+		if not targetPos or currentMode == "idle" then continue end
 
-		local targetPos = targetRoot.Position
 		local dist = (rootPart.Position - targetPos).Magnitude
 
 		if currentMode == "goto" then
 			if dist < ARRIVAL_DISTANCE then
 				humanoid:Move(Vector3.zero)
 				currentMode = "idle"
+				selectedTargetPosition = nil
 				clearPathVisual()
 				continue
 			end
@@ -347,6 +373,7 @@ local function createGUI()
 
 				btn.MouseButton1Click:Connect(function()
 					selectedTargetPlayer = plr
+					selectedTargetPosition = nil
 					selectedLabel.Text = "Target: " .. plr.Name
 					dropdown.Visible = false
 				end)
@@ -395,6 +422,7 @@ local function createGUI()
 
 	stopBtn.MouseButton1Click:Connect(function()
 		currentMode = "idle"
+		selectedTargetPosition = nil
 		currentPath = nil
 		waypoints = nil
 		clearPathVisual()
