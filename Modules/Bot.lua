@@ -33,16 +33,6 @@ local lastFollowTargetPos = nil
 
 print("[Cactus Bot] Loaded")
 
-function Bot.GotoPosition(pos)
-	if typeof(pos) ~= "Vector3" then return end
-
-	selectedTargetPlayer = nil
-	selectedTargetPosition = pos
-	currentMode = "goto"
-	currentPath = nil
-	waypoints = nil
-	clearPathVisual()
-end
 
 -- =========================
 -- Path visuals
@@ -59,6 +49,33 @@ local function clearPathVisual()
 		v:Destroy()
 	end
 end
+
+	function Bot.GotoPosition(pos)
+
+	-- if nil is passed, fully stop the bot
+	if pos == nil then
+		selectedTargetPosition = nil
+		currentMode = "idle"
+		currentPath = nil
+		waypoints = nil
+		clearPathVisual()
+		if humanoid then
+			humanoid:Move(Vector3.zero)
+		end
+		return
+	end
+
+	-- normal waypoint walking
+	if typeof(pos) ~= "Vector3" then return end
+
+	selectedTargetPlayer = nil
+	selectedTargetPosition = pos
+	currentMode = "goto"
+	currentPath = nil
+	waypoints = nil
+	clearPathVisual()
+end
+
 
 local function drawPathVisual(points)
 	clearPathVisual()
