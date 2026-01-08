@@ -1,287 +1,116 @@
--- Reactive Walker v1.2 (Path Visual Rewrite)
--- Goto + Follow with clean GUI (Cactus Client Module)
--- + Smooth neon green path visualiser
+-- Cactus Bot TEST – Waypoint only
 
 local Bot = {}
 
 function Bot.Init(Client)
 
-local Players = Client.Services.Players
-local PathfindingService = game:GetService("PathfindingService")
-local LOCAL_PLAYER = Client.Player
+	local PathfindingService = game:GetService("PathfindingService")
+	local LOCAL_PLAYER = Client.Player
 
-local ARRIVAL_DISTANCE = 5
-local STUCK_TIME = 2
-local FOLLOW_REPATH_DISTANCE = 10
+	local humanoid
+	local rootPart
+	local currentTarget
 
-local humanoid
-local rootPart
+	print("[TEST BOT] Loaded")
 
-local currentPath
-local waypoints
-local waypointIndex = 1
-local moving = false
+	-- =========================
+	-- Character
+	-- =========================
 
-local lastPosition
-local lastMoveTime = os.clock()
-
--- target + mode
-local selectedTargetPlayer = nil
-local selectedTargetPosition = nil
-local currentMode = "idle"
-local lastFollowTargetPos = nil
-
-print("[Cactus Bot] Loaded")
-
--- =========================
--- External API (for Waypoints)
--- =========================
-
-function Bot.GotoPosition(pos)
-	if typeof(pos) ~= "Vector3" then return end
-
-	selectedTargetPlayer = nil
-	selectedTargetPosition = pos
-	currentMode = "goto"
-	currentPath = nil
-	waypoints = nil
-	clearPathVisual()
-end
-
--- =========================
--- Path visuals
--- =========================
-
-local pathFolder = Instance.new("Folder")
-pathFolder.Name = "Cactus_Path"
-pathFolder.Parent = workspace
-
-local GREEN = Color3.fromRGB(0,255,90)
-
-local function clearPathVisual()
-	for _,v in ipairs(pathFolder:GetChildren()) do
-		v:Destroy()
-	end
-end
-
-local function drawPathVisual(points)
-	clearPathVisual()
-	if not points or #points < 2 then return end
-
-	local lastAttachment
-
-	for _,wp in ipairs(points) do
-		local holder = Instance.new("Part")
-		holder.Size = Vector3.new(0.2,0.2,0.2)
-		holder.Transparency = 1
-		holder.Anchored = true
-		holder.CanCollide = false
-		holder.Position = wp.Position
-		holder.Parent = pathFolder
-
-		local att = Instance.new("Attachment")
-		att.Parent = holder
-
-		if lastAttachment then
-			local beam = Instance.new("Beam")
-			beam.Attachment0 = lastAttachment
-			beam.Attachment1 = att
-			beam.FaceCamera = true
-			beam.Width0 = 0.18
-			beam.Width1 = 0.18
-			beam.LightEmission = 1
-			beam.LightInfluence = 0
-			beam.Color = ColorSequence.new(GREEN)
-			beam.Transparency = NumberSequence.new(0)
-			beam.Parent = holder
-		end
-
-		lastAttachment = att
-	end
-end
-
--- =========================
--- Character handling
--- =========================
-
-local function getCharacter()
-	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
-	humanoid = character:WaitForChild("Humanoid")
-	rootPart = character:WaitForChild("HumanoidRootPart")
-end
-
--- =========================
--- Target handling
--- =========================
-
-local function getTargetPosition()
-	if selectedTargetPlayer then
-		local char = selectedTargetPlayer.Character
-		if char then
-			local hrp = char:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				return hrp.Position
-			end
-		end
+	local function getCharacter()
+		local char = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
+		humanoid = char:WaitForChild("Humanoid")
+		rootPart = char:WaitForChild("HumanoidRootPart")
 	end
 
-	if selectedTargetPosition then
-		return selectedTargetPosition
-	end
-end
-
--- =========================
--- Path system
--- =========================
-
-local function computePath(targetPosition)
-	clearPathVisual()
-
-	local path = PathfindingService:CreatePath({
-		AgentRadius = 2,
-		AgentHeight = 5,
-		AgentCanJump = true,
-		AgentCanClimb = true,
-		WaypointSpacing = 3
-	})
-
-	path:ComputeAsync(rootPart.Position, targetPosition)
-
-	if path.Status == Enum.PathStatus.Success then
-		currentPath = path
-		waypoints = path:GetWaypoints()
-		waypointIndex = 2
-		drawPathVisual(waypoints)
-		return true
-	else
-		currentPath = nil
-		waypoints = nil
-		clearPathVisual()
-		return false
-	end
-end
-
--- =========================
--- Stuck detection
--- =========================
-
-local function isStuck()
-	if not lastPosition then
-		lastPosition = rootPart.Position
-		return false
-	end
-
-	local moved = (rootPart.Position - lastPosition).Magnitude
-
-	if moved > 0.6 then
-		lastMoveTime = os.clock()
-		lastPosition = rootPart.Position
-		return false
-	end
-
-	if os.clock() - lastMoveTime > STUCK_TIME then
-		return true
-	end
-
-	return false
-end
-
--- =========================
--- Waypoint walker
--- =========================
-
-local function walkNextWaypoint()
-	if not waypoints or not waypoints[waypointIndex] then
-		moving = false
-		clearPathVisual()
-		return
-	end
-
-	local wp = waypoints[waypointIndex]
-
-	if wp.Action == Enum.PathWaypointAction.Jump then
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	end
-
-	moving = true
-	humanoid:MoveTo(wp.Position)
-
-	humanoid.MoveToFinished:Once(function(reached)
-		if isStuck() or not reached then
-			currentPath = nil
-			waypoints = nil
-			moving = false
-			clearPathVisual()
-			return
-		end
-
-		waypointIndex += 1
-		walkNextWaypoint()
-	end)
-end
-
--- =========================
--- Main loop
--- =========================
-
-local function mainLoop()
-	while true do
-		task.wait(0.3)
-
-		local targetPos = getTargetPosition()
-		if not targetPos or currentMode == "idle" then continue end
-
-		local dist = (rootPart.Position - targetPos).Magnitude
-
-		if currentMode == "goto" then
-			if dist < ARRIVAL_DISTANCE then
-				humanoid:Move(Vector3.zero)
-				currentMode = "idle"
-				clearPathVisual()
-				continue
-			end
-		end
-
-		if currentMode == "follow" and selectedTargetPlayer then
-			if not lastFollowTargetPos then
-				lastFollowTargetPos = targetPos
-			end
-
-			if (lastFollowTargetPos - targetPos).Magnitude > FOLLOW_REPATH_DISTANCE then
-				currentPath = nil
-				waypoints = nil
-				clearPathVisual()
-				lastFollowTargetPos = targetPos
-			end
-		end
-
-		if not currentPath or not waypoints then
-			if computePath(targetPos) then
-				walkNextWaypoint()
-			end
-		end
-	end
-end
-
--- =========================
--- GUI (unchanged)
--- =========================
-
--- keep your GUI function EXACTLY as it was here
-
--- =========================
--- Boot
--- =========================
-
-getCharacter()
-createGUI()
-task.spawn(mainLoop)
-
-LOCAL_PLAYER.CharacterAdded:Connect(function()
-	task.wait(1)
 	getCharacter()
-end)
+	LOCAL_PLAYER.CharacterAdded:Connect(function()
+		task.wait(1)
+		getCharacter()
+	end)
 
+	-- =========================
+	-- Path visuals
+	-- =========================
+
+	local folder = Instance.new("Folder", workspace)
+	folder.Name = "Cactus_Test_Path"
+
+	local function clear()
+		for _,v in ipairs(folder:GetChildren()) do
+			v:Destroy()
+		end
+	end
+
+	local function draw(points)
+		clear()
+		local last
+		for _,wp in ipairs(points) do
+			local p = Instance.new("Part")
+			p.Size = Vector3.new(0.2,0.2,0.2)
+			p.Anchored = true
+			p.CanCollide = false
+			p.Transparency = 1
+			p.Position = wp.Position
+			p.Parent = folder
+
+			local a = Instance.new("Attachment", p)
+
+			if last then
+				local b = Instance.new("Beam")
+				b.Attachment0 = last
+				b.Attachment1 = a
+				b.FaceCamera = true
+				b.Width0 = 0.15
+				b.Width1 = 0.15
+				b.Color = ColorSequence.new(Color3.fromRGB(0,255,90))
+				b.LightEmission = 1
+				b.Parent = p
+			end
+
+			last = a
+		end
+	end
+
+	-- =========================
+	-- PUBLIC API (Waypoints)
+	-- =========================
+
+	function Bot.GotoPosition(pos)
+		print("[TEST BOT] GotoPosition called:", pos)
+		if typeof(pos) ~= "Vector3" then return end
+		currentTarget = pos
+	end
+
+	-- =========================
+	-- Main loop
+	-- =========================
+
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+
+			if not currentTarget or not rootPart then continue end
+
+			local path = PathfindingService:CreatePath()
+			path:ComputeAsync(rootPart.Position, currentTarget)
+
+			if path.Status == Enum.PathStatus.Success then
+				local wps = path:GetWaypoints()
+				draw(wps)
+
+				for _,wp in ipairs(wps) do
+					if wp.Action == Enum.PathWaypointAction.Jump then
+						humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+					end
+					humanoid:MoveTo(wp.Position)
+					humanoid.MoveToFinished:Wait()
+				end
+			end
+
+			currentTarget = nil
+		end
+	end)
 end
 
 return Bot
