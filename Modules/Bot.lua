@@ -6,300 +6,249 @@ local Bot = {}
 
 function Bot.Init(Client)
 
-	-- =========================
-	-- SAFE BOOT (prevents module crash)
-	-- =========================
+local Players = Client.Services.Players
+local PathfindingService = game:GetService("PathfindingService")
+local LOCAL_PLAYER = Client.Player
 
-	if not Client then return end
-	if not Client.Services then return end
-	if not Client.Pages then return end
+local ARRIVAL_DISTANCE = 5
+local STUCK_TIME = 2
+local FOLLOW_REPATH_DISTANCE = 10
 
-	local Players = Client.Services.Players or game:GetService("Players")
-	local PathfindingService = game:GetService("PathfindingService")
-	local LOCAL_PLAYER = Client.Player or Players.LocalPlayer
+local humanoid
+local rootPart
 
-	-- wait for page to actually exist
-	local Page = Client.Pages.Bot
-	while not Page do
-		task.wait()
-		Page = Client.Pages.Bot
+local currentPath
+local waypoints
+local waypointIndex = 1
+local moving = false
+
+local lastPosition
+local lastMoveTime = os.clock()
+
+-- target + mode
+local selectedTargetPlayer = nil
+local currentMode = "idle"
+local lastFollowTargetPos = nil
+
+print("[Cactus Bot] Loaded")
+
+-- =========================
+-- Path visuals
+-- =========================
+
+local pathFolder = Instance.new("Folder")
+pathFolder.Name = "Cactus_Path"
+pathFolder.Parent = workspace
+
+local GREEN = Color3.fromRGB(0,255,90)
+
+local function clearPathVisual()
+	for _,v in ipairs(pathFolder:GetChildren()) do
+		v:Destroy()
 	end
+end
 
-	local Theme = Client.Theme or {
-		STROKE = Color3.fromRGB(0,255,90),
-		TEXT = Color3.fromRGB(0,255,90),
-		TEXT_DIM = Color3.fromRGB(120,255,170),
-		BUTTON = Color3.fromRGB(15,25,18)
-	}
+local function drawPathVisual(points)
+	clearPathVisual()
+	if not points or #points < 2 then return end
 
-	-- =========================
-	-- Settings
-	-- =========================
+	local lastAttachment
 
-	local ARRIVAL_DISTANCE = 5
-	local STUCK_TIME = 2
-	local FOLLOW_REPATH_DISTANCE = 10
+	for i,wp in ipairs(points) do
+		local holder = Instance.new("Part")
+		holder.Size = Vector3.new(0.2,0.2,0.2)
+		holder.Transparency = 1
+		holder.Anchored = true
+		holder.CanCollide = false
+		holder.Position = wp.Position
+		holder.Parent = pathFolder
 
-	local humanoid
-	local rootPart
+		local att = Instance.new("Attachment")
+		att.Parent = holder
 
-	local currentPath
-	local waypoints
-	local waypointIndex = 1
-	local moving = false
-
-	local lastPosition
-	local lastMoveTime = os.clock()
-
-	-- target + mode
-	local selectedTargetPlayer = nil
-	local selectedTargetPosition = nil
-	local currentMode = "idle"
-	local lastFollowTargetPos = nil
-
-	print("[Cactus Bot] Loaded")
-
-	-- =========================
-	-- Path visuals
-	-- =========================
-
-	local pathFolder = Instance.new("Folder")
-	pathFolder.Name = "Cactus_Path"
-	pathFolder.Parent = workspace
-
-	local GREEN = Color3.fromRGB(0,255,90)
-
-	local function clearPathVisual()
-		for _,v in ipairs(pathFolder:GetChildren()) do
-			v:Destroy()
-		end
-	end
-
-	function Bot.GotoPosition(pos)
-
-		if pos == nil then
-			selectedTargetPosition = nil
-			currentMode = "idle"
-			currentPath = nil
-			waypoints = nil
-			clearPathVisual()
-			if humanoid then
-				humanoid:Move(Vector3.zero)
-			end
-			return
+		if lastAttachment then
+			local beam = Instance.new("Beam")
+			beam.Attachment0 = lastAttachment
+			beam.Attachment1 = att
+			beam.FaceCamera = true
+			beam.Width0 = 0.18
+			beam.Width1 = 0.18
+			beam.LightEmission = 1
+			beam.LightInfluence = 0
+			beam.Color = ColorSequence.new(GREEN)
+			beam.Transparency = NumberSequence.new(0)
+			beam.Parent = holder
 		end
 
-		if typeof(pos) ~= "Vector3" then return end
+		lastAttachment = att
+	end
+end
 
-		selectedTargetPlayer = nil
-		selectedTargetPosition = pos
-		currentMode = "goto"
+-- =========================
+-- Character handling
+-- =========================
+
+local function getCharacter()
+	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
+	humanoid = character:WaitForChild("Humanoid")
+	rootPart = character:WaitForChild("HumanoidRootPart")
+end
+
+-- =========================
+-- Target handling
+-- =========================
+
+local function getTargetRoot()
+	if not selectedTargetPlayer then return end
+	local char = selectedTargetPlayer.Character
+	if not char then return end
+	return char:FindFirstChild("HumanoidRootPart")
+end
+
+-- =========================
+-- Path system
+-- =========================
+
+local function computePath(targetPosition)
+	clearPathVisual()
+
+	local path = PathfindingService:CreatePath({
+		AgentRadius = 2,
+		AgentHeight = 5,
+		AgentCanJump = true,
+		AgentCanClimb = true,
+		WaypointSpacing = 3
+	})
+
+	path:ComputeAsync(rootPart.Position, targetPosition)
+
+	if path.Status == Enum.PathStatus.Success then
+		currentPath = path
+		waypoints = path:GetWaypoints()
+		waypointIndex = 2
+
+		drawPathVisual(waypoints)
+
+		return true
+	else
 		currentPath = nil
 		waypoints = nil
 		clearPathVisual()
+		return false
 	end
+end
 
-	local function drawPathVisual(points)
-		clearPathVisual()
-		if not points or #points < 2 then return end
+-- =========================
+-- Stuck detection
+-- =========================
 
-		local lastAttachment
-
-		for _,wp in ipairs(points) do
-			local holder = Instance.new("Part")
-			holder.Size = Vector3.new(0.2,0.2,0.2)
-			holder.Transparency = 1
-			holder.Anchored = true
-			holder.CanCollide = false
-			holder.Position = wp.Position
-			holder.Parent = pathFolder
-
-			local att = Instance.new("Attachment", holder)
-
-			if lastAttachment then
-				local beam = Instance.new("Beam")
-				beam.Attachment0 = lastAttachment
-				beam.Attachment1 = att
-				beam.FaceCamera = true
-				beam.Width0 = 0.18
-				beam.Width1 = 0.18
-				beam.LightEmission = 1
-				beam.LightInfluence = 0
-				beam.Color = ColorSequence.new(GREEN)
-				beam.Transparency = NumberSequence.new(0)
-				beam.Parent = holder
-			end
-
-			lastAttachment = att
-		end
-	end
-
-	-- =========================
-	-- Character handling
-	-- =========================
-
-	local function getCharacter()
-		local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
-		humanoid = character:WaitForChild("Humanoid")
-		rootPart = character:WaitForChild("HumanoidRootPart")
-	end
-
-	-- =========================
-	-- Target handling
-	-- =========================
-
-	local function getTargetPosition()
-		if selectedTargetPlayer then
-			local char = selectedTargetPlayer.Character
-			if char then
-				local hrp = char:FindFirstChild("HumanoidRootPart")
-				if hrp then
-					return hrp.Position
-				end
-			end
-		end
-
-		if selectedTargetPosition then
-			return selectedTargetPosition
-		end
-	end
-
-	-- =========================
-	-- Path system
-	-- =========================
-
-	local function computePath(targetPosition)
-		clearPathVisual()
-
-		local path = PathfindingService:CreatePath({
-			AgentRadius = 2,
-			AgentHeight = 5,
-			AgentCanJump = true,
-			AgentCanClimb = true,
-			WaypointSpacing = 3
-		})
-
-		path:ComputeAsync(rootPart.Position, targetPosition)
-
-		if path.Status == Enum.PathStatus.Success then
-			currentPath = path
-			waypoints = path:GetWaypoints()
-			waypointIndex = 2
-			drawPathVisual(waypoints)
-			return true
-		else
-			currentPath = nil
-			waypoints = nil
-			clearPathVisual()
-			return false
-		end
-	end
-
-	-- =========================
-	-- Stuck detection
-	-- =========================
-
-	local function isStuck()
-		if not lastPosition then
-			lastPosition = rootPart.Position
-			return false
-		end
-
-		local moved = (rootPart.Position - lastPosition).Magnitude
-
-		if moved > 0.6 then
-			lastMoveTime = os.clock()
-			lastPosition = rootPart.Position
-			return false
-		end
-
-		if os.clock() - lastMoveTime > STUCK_TIME then
-			return true
-		end
-
+local function isStuck()
+	if not lastPosition then
+		lastPosition = rootPart.Position
 		return false
 	end
 
-	-- =========================
-	-- Waypoint walker
-	-- =========================
+	local moved = (rootPart.Position - lastPosition).Magnitude
 
-	local function walkNextWaypoint()
-		if not waypoints or not waypoints[waypointIndex] then
+	if moved > 0.6 then
+		lastMoveTime = os.clock()
+		lastPosition = rootPart.Position
+		return false
+	end
+
+	if os.clock() - lastMoveTime > STUCK_TIME then
+		return true
+	end
+
+	return false
+end
+
+-- =========================
+-- Waypoint walker
+-- =========================
+
+local function walkNextWaypoint()
+	if not waypoints or not waypoints[waypointIndex] then
+		moving = false
+		clearPathVisual()
+		return
+	end
+
+	local wp = waypoints[waypointIndex]
+
+	if wp.Action == Enum.PathWaypointAction.Jump then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+
+	moving = true
+	humanoid:MoveTo(wp.Position)
+
+	humanoid.MoveToFinished:Once(function(reached)
+		if isStuck() or not reached then
+			currentPath = nil
+			waypoints = nil
 			moving = false
 			clearPathVisual()
 			return
 		end
 
-		local wp = waypoints[waypointIndex]
+		waypointIndex += 1
+		walkNextWaypoint()
+	end)
+end
 
-		if wp.Action == Enum.PathWaypointAction.Jump then
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-		end
+-- =========================
+-- Main loop
+-- =========================
 
-		moving = true
-		humanoid:MoveTo(wp.Position)
+local function mainLoop()
+	while true do
+		task.wait(0.3)
 
-		humanoid.MoveToFinished:Once(function(reached)
-			if isStuck() or not reached then
-				currentPath = nil
-				waypoints = nil
-				moving = false
-				clearPathVisual()
-				return
-			end
+		local targetRoot = getTargetRoot()
+		if not targetRoot or currentMode == "idle" then continue end
 
-			waypointIndex += 1
-			walkNextWaypoint()
-		end)
-	end
+		local targetPos = targetRoot.Position
+		local dist = (rootPart.Position - targetPos).Magnitude
 
-	-- =========================
-	-- Main loop
-	-- =========================
-
-	task.spawn(function()
-		while true do
-			task.wait(0.3)
-
-			if not rootPart then continue end
-
-			local targetPos = getTargetPosition()
-			if not targetPos or currentMode == "idle" then continue end
-
-			local dist = (rootPart.Position - targetPos).Magnitude
-
-			if currentMode == "goto" and dist < ARRIVAL_DISTANCE then
+		if currentMode == "goto" then
+			if dist < ARRIVAL_DISTANCE then
 				humanoid:Move(Vector3.zero)
 				currentMode = "idle"
 				clearPathVisual()
 				continue
 			end
+		end
 
-			if currentMode == "follow" then
-				if not lastFollowTargetPos then
-					lastFollowTargetPos = targetPos
-				end
-
-				if (lastFollowTargetPos - targetPos).Magnitude > FOLLOW_REPATH_DISTANCE then
-					currentPath = nil
-					waypoints = nil
-					clearPathVisual()
-					lastFollowTargetPos = targetPos
-				end
+		if currentMode == "follow" then
+			if not lastFollowTargetPos then
+				lastFollowTargetPos = targetPos
 			end
 
-			if not currentPath or not waypoints then
-				if computePath(targetPos) then
-					walkNextWaypoint()
-				end
+			if (lastFollowTargetPos - targetPos).Magnitude > FOLLOW_REPATH_DISTANCE then
+				currentPath = nil
+				waypoints = nil
+				clearPathVisual()
+				lastFollowTargetPos = targetPos
 			end
 		end
-	end)
 
-	-- =========================
-	-- GUI
-	-- =========================
+		if not currentPath or not waypoints then
+			if computePath(targetPos) then
+				walkNextWaypoint()
+			end
+		end
+	end
+end
+
+-- =========================
+-- GUI (unchanged)
+-- =========================
+
+local function createGUI()
+
+	local Page = Client.Pages.Bot
+	local Theme = Client.Theme
 
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(0, 220, 0, 200)
@@ -313,7 +262,7 @@ function Bot.Init(Client)
 	stroke.Color = Theme.STROKE
 	stroke.Transparency = 0.4
 
-	local title = Instance.new("TextLabel", frame)
+	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -10, 0, 28)
 	title.Position = UDim2.new(0, 10, 0, 4)
 	title.BackgroundTransparency = 1
@@ -322,6 +271,7 @@ function Bot.Init(Client)
 	title.TextSize = 16
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.TextColor3 = Theme.TEXT
+	title.Parent = frame
 
 	local function makeButton(text, y)
 		local b = Instance.new("TextButton")
@@ -338,21 +288,134 @@ function Bot.Init(Client)
 		return b
 	end
 
-	makeButton("Select Player", 36)
-	makeButton("Goto Target", 72)
-	makeButton("Follow Target", 108)
-	makeButton("Stop", 144)
+	local selectBtn = makeButton("Select Player", 36)
+	local gotoBtn   = makeButton("Goto Target", 72)
+	local followBtn = makeButton("Follow Target", 108)
+	local stopBtn   = makeButton("Stop", 144)
 
-	-- =========================
-	-- Boot
-	-- =========================
+	local selectedLabel = Instance.new("TextLabel")
+	selectedLabel.Size = UDim2.new(1, -20, 0, 20)
+	selectedLabel.Position = UDim2.new(0, 10, 0, 176)
+	selectedLabel.BackgroundTransparency = 1
+	selectedLabel.Text = "Target: none"
+	selectedLabel.Font = Enum.Font.Code
+	selectedLabel.TextSize = 13
+	selectedLabel.TextXAlignment = Enum.TextXAlignment.Left
+	selectedLabel.TextColor3 = Theme.TEXT_DIM
+	selectedLabel.Parent = frame
 
-	getCharacter()
+	local dropdown = Instance.new("Frame")
+	dropdown.Visible = false
+	dropdown.Size = UDim2.new(0, 190, 0, 160)
+	dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
+	dropdown.BorderSizePixel = 0
+	dropdown.Parent = Page
+	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
 
-	LOCAL_PLAYER.CharacterAdded:Connect(function()
-		task.wait(1)
-		getCharacter()
+	local dStroke = Instance.new("UIStroke", dropdown)
+	dStroke.Color = Theme.STROKE
+	dStroke.Transparency = 0.4
+
+	local list = Instance.new("ScrollingFrame")
+	list.Size = UDim2.new(1, -10, 1, -10)
+	list.Position = UDim2.new(0, 5, 0, 5)
+	list.CanvasSize = UDim2.new(0,0,0,0)
+	list.ScrollBarImageTransparency = 0.3
+	list.BackgroundTransparency = 1
+	list.Parent = dropdown
+
+	local layout = Instance.new("UIListLayout", list)
+	layout.Padding = UDim.new(0,6)
+
+	local function rebuildList()
+		for _, c in ipairs(list:GetChildren()) do
+			if c:IsA("TextButton") then c:Destroy() end
+		end
+
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LOCAL_PLAYER then
+				local btn = Instance.new("TextButton")
+				btn.Size = UDim2.new(1,0,0,30)
+				btn.Text = plr.Name
+				btn.Font = Enum.Font.Code
+				btn.TextSize = 14
+				btn.TextColor3 = Theme.TEXT_DIM
+				btn.BackgroundColor3 = Theme.BUTTON
+				btn.BorderSizePixel = 0
+				btn.Parent = list
+				Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+
+				btn.MouseButton1Click:Connect(function()
+					selectedTargetPlayer = plr
+					selectedLabel.Text = "Target: " .. plr.Name
+					dropdown.Visible = false
+				end)
+			end
+		end
+
+		task.wait()
+		list.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 6)
+	end
+
+	local function openDropdown(btn)
+		dropdown.Visible = not dropdown.Visible
+
+		dropdown.Position = UDim2.new(
+			0,
+			btn.Position.X.Offset,
+			0,
+			btn.Position.Y.Offset + btn.Size.Y.Offset + 6
+		)
+
+		rebuildList()
+	end
+
+	selectBtn.MouseButton1Click:Connect(function()
+		openDropdown(selectBtn)
 	end)
+
+	gotoBtn.MouseButton1Click:Connect(function()
+		if selectedTargetPlayer then
+			currentMode = "goto"
+			currentPath = nil
+			waypoints = nil
+			clearPathVisual()
+		end
+	end)
+
+	followBtn.MouseButton1Click:Connect(function()
+		if selectedTargetPlayer then
+			currentMode = "follow"
+			lastFollowTargetPos = nil
+			currentPath = nil
+			waypoints = nil
+			clearPathVisual()
+		end
+	end)
+
+	stopBtn.MouseButton1Click:Connect(function()
+		currentMode = "idle"
+		currentPath = nil
+		waypoints = nil
+		clearPathVisual()
+		if humanoid then
+			humanoid:Move(Vector3.zero)
+		end
+	end)
+end
+
+-- =========================
+-- Boot
+-- =========================
+
+getCharacter()
+createGUI()
+task.spawn(mainLoop)
+
+LOCAL_PLAYER.CharacterAdded:Connect(function()
+	task.wait(1)
+	getCharacter()
+end)
 
 end
 
