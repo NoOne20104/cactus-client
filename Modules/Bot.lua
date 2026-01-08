@@ -27,10 +27,22 @@ local lastMoveTime = os.clock()
 
 -- target + mode
 local selectedTargetPlayer = nil
+local selectedTargetPosition = nil
 local currentMode = "idle"
 local lastFollowTargetPos = nil
 
 print("[Cactus Bot] Loaded")
+
+function Bot.GotoPosition(pos)
+	if typeof(pos) ~= "Vector3" then return end
+
+	selectedTargetPlayer = nil
+	selectedTargetPosition = pos
+	currentMode = "goto"
+	currentPath = nil
+	waypoints = nil
+	clearPathVisual()
+end
 
 -- =========================
 -- Path visuals
@@ -98,11 +110,22 @@ end
 -- Target handling
 -- =========================
 
-local function getTargetRoot()
-	if not selectedTargetPlayer then return end
-	local char = selectedTargetPlayer.Character
-	if not char then return end
-	return char:FindFirstChild("HumanoidRootPart")
+local function getTargetPosition()
+	-- player target
+	if selectedTargetPlayer then
+		local char = selectedTargetPlayer.Character
+		if char then
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				return hrp.Position
+			end
+		end
+	end
+
+	-- waypoint / raw position target
+	if selectedTargetPosition then
+		return selectedTargetPosition
+	end
 end
 
 -- =========================
@@ -205,10 +228,8 @@ local function mainLoop()
 	while true do
 		task.wait(0.3)
 
-		local targetRoot = getTargetRoot()
-		if not targetRoot or currentMode == "idle" then continue end
-
-		local targetPos = targetRoot.Position
+		local targetPos = getTargetPosition()
+if not targetPos or currentMode == "idle" then continue end
 		local dist = (rootPart.Position - targetPos).Magnitude
 
 		if currentMode == "goto" then
@@ -375,16 +396,17 @@ local function createGUI()
 	end)
 
 	gotoBtn.MouseButton1Click:Connect(function()
-		if selectedTargetPlayer then
-			currentMode = "goto"
-			currentPath = nil
-			waypoints = nil
-			clearPathVisual()
-		end
-	end)
-
+	if selectedTargetPlayer then
+		selectedTargetPosition = nil   -- <<< ADD THIS LINE
+		currentMode = "goto"
+		currentPath = nil
+		waypoints = nil
+		clearPathVisual()
+	end
+end)
 	followBtn.MouseButton1Click:Connect(function()
 		if selectedTargetPlayer then
+                        selectedTargetPosition = nil
 			currentMode = "follow"
 			lastFollowTargetPos = nil
 			currentPath = nil
@@ -394,15 +416,15 @@ local function createGUI()
 	end)
 
 	stopBtn.MouseButton1Click:Connect(function()
-		currentMode = "idle"
-		currentPath = nil
-		waypoints = nil
-		clearPathVisual()
-		if humanoid then
-			humanoid:Move(Vector3.zero)
-		end
-	end)
-end
+	currentMode = "idle"
+	selectedTargetPosition = nil   -- <<< ADD THIS LINE
+	currentPath = nil
+	waypoints = nil
+	clearPathVisual()
+	if humanoid then
+		humanoid:Move(Vector3.zero)
+	end
+end)
 
 -- =========================
 -- Boot
