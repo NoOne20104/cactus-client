@@ -25,7 +25,7 @@ local moving = false
 local lastPosition
 local lastMoveTime = os.clock()
 
--- targets + mode
+-- target + mode
 local selectedTargetPlayer = nil
 local selectedTargetPosition = nil
 local currentMode = "idle"
@@ -47,6 +47,23 @@ local function clearPathVisual()
 	for _,v in ipairs(pathFolder:GetChildren()) do
 		v:Destroy()
 	end
+end
+
+-- 🔥 EXTERNAL API (WAYPOINTS CALL THIS)
+function Bot.GotoPosition(pos)
+	print("[Bot] GotoPosition called:", pos)
+
+	if typeof(pos) ~= "Vector3" then
+		warn("[Bot] Invalid position passed")
+		return
+	end
+
+	selectedTargetPlayer = nil
+	selectedTargetPosition = pos
+	currentMode = "goto"
+	currentPath = nil
+	waypoints = nil
+	clearPathVisual()
 end
 
 local function drawPathVisual(points)
@@ -77,26 +94,12 @@ local function drawPathVisual(points)
 			beam.LightEmission = 1
 			beam.LightInfluence = 0
 			beam.Color = ColorSequence.new(GREEN)
+			beam.Transparency = NumberSequence.new(0)
 			beam.Parent = holder
 		end
 
 		lastAttachment = att
 	end
-end
-
--- =========================
--- External API (Waypoints uses this)
--- =========================
-
-function Bot.GotoPosition(pos)
-	if typeof(pos) ~= "Vector3" then return end
-
-	selectedTargetPlayer = nil
-	selectedTargetPosition = pos
-	currentMode = "goto"
-	currentPath = nil
-	waypoints = nil
-	clearPathVisual()
 end
 
 -- =========================
@@ -114,14 +117,11 @@ end
 -- =========================
 
 local function getTargetPosition()
-
 	if selectedTargetPlayer then
 		local char = selectedTargetPlayer.Character
 		if char then
 			local hrp = char:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				return hrp.Position
-			end
+			if hrp then return hrp.Position end
 		end
 	end
 
@@ -135,6 +135,8 @@ end
 -- =========================
 
 local function computePath(targetPosition)
+	print("[Bot] Computing path to:", targetPosition)
+
 	clearPathVisual()
 
 	local path = PathfindingService:CreatePath({
@@ -152,9 +154,11 @@ local function computePath(targetPosition)
 		waypoints = path:GetWaypoints()
 		waypointIndex = 2
 
+		print("[Bot] Path success. Waypoints:", #waypoints)
 		drawPathVisual(waypoints)
 		return true
 	else
+		warn("[Bot] Path failed:", path.Status.Name)
 		currentPath = nil
 		waypoints = nil
 		clearPathVisual()
@@ -181,6 +185,7 @@ local function isStuck()
 	end
 
 	if os.clock() - lastMoveTime > STUCK_TIME then
+		warn("[Bot] Stuck detected")
 		return true
 	end
 
@@ -195,6 +200,7 @@ local function walkNextWaypoint()
 	if not waypoints or not waypoints[waypointIndex] then
 		moving = false
 		clearPathVisual()
+		print("[Bot] Finished path")
 		return
 	end
 
@@ -213,6 +219,7 @@ local function walkNextWaypoint()
 			waypoints = nil
 			moving = false
 			clearPathVisual()
+			warn("[Bot] Move failed")
 			return
 		end
 
@@ -232,29 +239,6 @@ local function mainLoop()
 		local targetPos = getTargetPosition()
 		if not targetPos or currentMode == "idle" then continue end
 
-		local dist = (rootPart.Position - targetPos).Magnitude
-
-		if currentMode == "goto" and dist < ARRIVAL_DISTANCE then
-			humanoid:Move(Vector3.zero)
-			currentMode = "idle"
-			selectedTargetPosition = nil
-			clearPathVisual()
-			continue
-		end
-
-		if currentMode == "follow" then
-			if not lastFollowTargetPos then
-				lastFollowTargetPos = targetPos
-			end
-
-			if (lastFollowTargetPos - targetPos).Magnitude > FOLLOW_REPATH_DISTANCE then
-				currentPath = nil
-				waypoints = nil
-				clearPathVisual()
-				lastFollowTargetPos = targetPos
-			end
-		end
-
 		if not currentPath or not waypoints then
 			if computePath(targetPos) then
 				walkNextWaypoint()
@@ -264,169 +248,10 @@ local function mainLoop()
 end
 
 -- =========================
--- GUI (unchanged)
--- =========================
-
-local function createGUI()
-
-	local Page = Client.Pages.Bot
-	local Theme = Client.Theme
-
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 220, 0, 200)
-	frame.Position = UDim2.new(0, 10, 0, 10)
-	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
-	frame.BorderSizePixel = 0
-	frame.Parent = Page
-	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
-
-	local stroke = Instance.new("UIStroke", frame)
-	stroke.Color = Theme.STROKE
-	stroke.Transparency = 0.4
-
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -10, 0, 28)
-	title.Position = UDim2.new(0, 10, 0, 4)
-	title.BackgroundTransparency = 1
-	title.Text = "Bot"
-	title.Font = Enum.Font.Code
-	title.TextSize = 16
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.TextColor3 = Theme.TEXT
-	title.Parent = frame
-
-	local function makeButton(text, y)
-		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(1, -20, 0, 30)
-		b.Position = UDim2.new(0, 10, 0, y)
-		b.BackgroundColor3 = Theme.BUTTON
-		b.Text = text
-		b.Font = Enum.Font.Code
-		b.TextSize = 14
-		b.TextColor3 = Theme.TEXT_DIM
-		b.BorderSizePixel = 0
-		b.Parent = frame
-		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-		return b
-	end
-
-	local selectBtn = makeButton("Select Player", 36)
-	local gotoBtn   = makeButton("Goto Target", 72)
-	local followBtn = makeButton("Follow Target", 108)
-	local stopBtn   = makeButton("Stop", 144)
-
-	local selectedLabel = Instance.new("TextLabel")
-	selectedLabel.Size = UDim2.new(1, -20, 0, 20)
-	selectedLabel.Position = UDim2.new(0, 10, 0, 176)
-	selectedLabel.BackgroundTransparency = 1
-	selectedLabel.Text = "Target: none"
-	selectedLabel.Font = Enum.Font.Code
-	selectedLabel.TextSize = 13
-	selectedLabel.TextXAlignment = Enum.TextXAlignment.Left
-	selectedLabel.TextColor3 = Theme.TEXT_DIM
-	selectedLabel.Parent = frame
-
-	local dropdown = Instance.new("Frame")
-	dropdown.Visible = false
-	dropdown.Size = UDim2.new(0, 190, 0, 160)
-	dropdown.BackgroundColor3 = Color3.fromRGB(14,14,14)
-	dropdown.BorderSizePixel = 0
-	dropdown.Parent = Page
-	Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0, 10)
-
-	local dStroke = Instance.new("UIStroke", dropdown)
-	dStroke.Color = Theme.STROKE
-	dStroke.Transparency = 0.4
-
-	local list = Instance.new("ScrollingFrame")
-	list.Size = UDim2.new(1, -10, 1, -10)
-	list.Position = UDim2.new(0, 5, 0, 5)
-	list.CanvasSize = UDim2.new(0,0,0,0)
-	list.ScrollBarImageTransparency = 0.3
-	list.BackgroundTransparency = 1
-	list.Parent = dropdown
-
-	local layout = Instance.new("UIListLayout", list)
-	layout.Padding = UDim.new(0,6)
-
-	local function rebuildList()
-		for _, c in ipairs(list:GetChildren()) do
-			if c:IsA("TextButton") then c:Destroy() end
-		end
-
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= LOCAL_PLAYER then
-				local btn = Instance.new("TextButton")
-				btn.Size = UDim2.new(1,0,0,30)
-				btn.Text = plr.Name
-				btn.Font = Enum.Font.Code
-				btn.TextSize = 14
-				btn.TextColor3 = Theme.TEXT_DIM
-				btn.BackgroundColor3 = Theme.BUTTON
-				btn.BorderSizePixel = 0
-				btn.Parent = list
-				Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-
-				btn.MouseButton1Click:Connect(function()
-					selectedTargetPlayer = plr
-					selectedTargetPosition = nil
-					selectedLabel.Text = "Target: " .. plr.Name
-					dropdown.Visible = false
-				end)
-			end
-		end
-
-		task.wait()
-		list.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 6)
-	end
-
-	local function openDropdown(btn)
-		dropdown.Visible = not dropdown.Visible
-		dropdown.Position = UDim2.new(0, btn.Position.X.Offset, 0, btn.Position.Y.Offset + btn.Size.Y.Offset + 6)
-		rebuildList()
-	end
-
-	selectBtn.MouseButton1Click:Connect(function()
-		openDropdown(selectBtn)
-	end)
-
-	gotoBtn.MouseButton1Click:Connect(function()
-		if selectedTargetPlayer then
-			currentMode = "goto"
-			currentPath = nil
-			waypoints = nil
-			clearPathVisual()
-		end
-	end)
-
-	followBtn.MouseButton1Click:Connect(function()
-		if selectedTargetPlayer then
-			currentMode = "follow"
-			lastFollowTargetPos = nil
-			currentPath = nil
-			waypoints = nil
-			clearPathVisual()
-		end
-	end)
-
-	stopBtn.MouseButton1Click:Connect(function()
-		currentMode = "idle"
-		selectedTargetPosition = nil
-		currentPath = nil
-		waypoints = nil
-		clearPathVisual()
-		if humanoid then
-			humanoid:Move(Vector3.zero)
-		end
-	end)
-end
-
--- =========================
 -- Boot
 -- =========================
 
 getCharacter()
-createGUI()
 task.spawn(mainLoop)
 
 LOCAL_PLAYER.CharacterAdded:Connect(function()
@@ -437,4 +262,5 @@ end)
 end
 
 return Bot
+
 
