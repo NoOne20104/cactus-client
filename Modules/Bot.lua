@@ -21,6 +21,9 @@ local waypoints
 local waypointIndex = 1
 local moving = false
 
+-- expose bot path for visualiser
+Client.State.BotPath = nil
+
 local lastPosition
 local lastMoveTime = os.clock()
 
@@ -68,11 +71,18 @@ local function computePath(targetPosition)
 	path:ComputeAsync(rootPart.Position, targetPosition)
 
 	if path.Status == Enum.PathStatus.Success then
-		currentPath = path
-		waypoints = path:GetWaypoints()
-		waypointIndex = 2
-		return true
-	else
+	currentPath = path
+	waypoints = path:GetWaypoints()
+	waypointIndex = 2
+
+	--  expose path to visualiser
+	local visPath = {}
+	for _, wp in ipairs(waypoints) do
+		table.insert(visPath, wp.Position)
+	end
+	Client.State.BotPath = visPath
+
+	return true	else
 		currentPath = nil
 		waypoints = nil
 		return false
@@ -110,10 +120,10 @@ end
 
 local function walkNextWaypoint()
 	if not waypoints or not waypoints[waypointIndex] then
-		moving = false
-		return
-	end
-
+	moving = false
+	Client.State.BotPath = nil
+	return
+end
 	local wp = waypoints[waypointIndex]
 
 	if wp.Action == Enum.PathWaypointAction.Jump then
@@ -125,12 +135,12 @@ local function walkNextWaypoint()
 
 	humanoid.MoveToFinished:Once(function(reached)
 		if isStuck() or not reached then
-			currentPath = nil
-			waypoints = nil
-			moving = false
-			return
-		end
-
+	currentPath = nil
+	waypoints = nil
+	moving = false
+	Client.State.BotPath = nil
+	return
+end
 		waypointIndex += 1
 		walkNextWaypoint()
 	end)
@@ -152,11 +162,11 @@ local function mainLoop()
 
 		if currentMode == "goto" then
 			if dist < ARRIVAL_DISTANCE then
-				humanoid:Move(Vector3.zero)
-				currentMode = "idle"
-				continue
-			end
-		end
+	humanoid:Move(Vector3.zero)
+	currentMode = "idle"
+	Client.State.BotPath = nil
+	continue
+end		end
 
 		if currentMode == "follow" then
 			if not lastFollowTargetPos then
@@ -334,12 +344,14 @@ end
 	end)
 
 	stopBtn.MouseButton1Click:Connect(function()
-		currentMode = "idle"
-		currentPath = nil
-		waypoints = nil
-		if humanoid then
-			humanoid:Move(Vector3.zero)
-		end
+	currentMode = "idle"
+	currentPath = nil
+	waypoints = nil
+	Client.State.BotPath = nil
+	if humanoid then
+		humanoid:Move(Vector3.zero)
+	end
+
 	end)
 end
 
