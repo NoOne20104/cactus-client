@@ -1,9 +1,7 @@
 local Waypoints = {}
 
 function Waypoints.Init(Client)
-
-	print("[Waypoints] Module loading...")
-
+	local Players = Client.Services.Players
 	local RunService = Client.Services.RunService
 	local LocalPlayer = Client.Player
 	local Page = Client.Pages.Waypoints
@@ -11,19 +9,36 @@ function Waypoints.Init(Client)
 	local Theme = Client.Theme
 
 	local waypointPos = nil
-	local markerPart, beam, attachment0, attachment1, camConn
+	local markerPart = nil
+	local beam = nil
+	local attachment0 = nil
+	local attachment1 = nil
+	local camConn = nil
 
 	-- =========================
-	-- UI
+	-- UI (inside Waypoints page)
 	-- =========================
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 220, 0, 205)
+	frame.Size = UDim2.new(0, 220, 0, 170)
 	frame.Position = UDim2.new(0, 10, 0, 10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
 	frame.Parent = Page
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
+
+	local stroke = Instance.new("UIStroke", frame)
+	stroke.Color = Theme.STROKE
+	stroke.Transparency = 0.4
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1,0,0,30)
+	title.BackgroundTransparency = 1
+	title.Text = "Waypoints"
+	title.Font = Enum.Font.Code
+	title.TextSize = 16
+	title.TextColor3 = Theme.TEXT
+	title.Parent = frame
 
 	local function makeButton(text, y)
 		local b = Instance.new("TextButton")
@@ -40,24 +55,22 @@ function Waypoints.Init(Client)
 		return b
 	end
 
-	local setBtn   = makeButton("Set Waypoint", 40)
-	local tpBtn    = makeButton("Teleport to Waypoint", 75)
-	local walkBtn  = makeButton("Walk to Waypoint", 110)
-	local clearBtn = makeButton("Clear Waypoint", 145)
-
-	assert(setBtn and tpBtn and walkBtn and clearBtn, "[Waypoints] Button creation failed")
+	local setBtn = makeButton("Set Waypoint", 40)
+	local tpBtn = makeButton("Teleport to Waypoint", 75)
+	local clearBtn = makeButton("Clear Waypoint", 110)
 
 	-- =========================
 	-- Marker
 	-- =========================
 
 	local function createMarker(pos)
-		if camConn then camConn:Disconnect() end
+		if camConn then camConn:Disconnect() camConn = nil end
 		if markerPart then markerPart:Destroy() end
+		if beam then beam:Destroy() end
 
 		markerPart = Instance.new("Part")
-		markerPart.Shape = Enum.PartType.Ball
 		markerPart.Size = Vector3.new(0.6,0.6,0.6)
+		markerPart.Shape = Enum.PartType.Ball
 		markerPart.Material = Enum.Material.Neon
 		markerPart.Color = Theme.TEXT
 		markerPart.Anchored = true
@@ -65,10 +78,20 @@ function Waypoints.Init(Client)
 		markerPart.Position = pos
 		markerPart.Parent = workspace
 
+		local highlight = Instance.new("Highlight")
+		highlight.Adornee = markerPart
+		highlight.FillColor = Theme.TEXT
+		highlight.OutlineColor = Theme.TEXT
+		highlight.FillTransparency = 0.4
+		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.Parent = markerPart
+
 		attachment0 = Instance.new("Attachment", markerPart)
 
 		local camPart = Instance.new("Part")
 		camPart.Anchored = true
+		camPart.CanCollide = false
 		camPart.Transparency = 1
 		camPart.Parent = workspace
 
@@ -84,7 +107,7 @@ function Waypoints.Init(Client)
 		beam.Parent = markerPart
 
 		camConn = RunService.RenderStepped:Connect(function()
-			if workspace.CurrentCamera then
+			if camPart and workspace.CurrentCamera then
 				camPart.Position = workspace.CurrentCamera.CFrame.Position
 			end
 		end)
@@ -95,48 +118,33 @@ function Waypoints.Init(Client)
 	-- =========================
 
 	setBtn.MouseButton1Click:Connect(function()
-		local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		local char = LocalPlayer.Character
+		if not char then return end
+		local hrp = char:FindFirstChild("HumanoidRootPart")
 		if not hrp then return end
 
 		waypointPos = hrp.Position
 		State.Waypoint = waypointPos
 		createMarker(waypointPos)
-
-		print("[Waypoints] Set:", waypointPos)
 	end)
 
 	tpBtn.MouseButton1Click:Connect(function()
-		if waypointPos and LocalPlayer.Character then
-			local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				hrp.CFrame = CFrame.new(waypointPos + Vector3.new(0,3,0))
-			end
-		end
-	end)
+		if not waypointPos then return end
+		local char = LocalPlayer.Character
+		if not char then return end
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
 
-	walkBtn.MouseButton1Click:Connect(function()
-		print("[Waypoints] Walk button pressed")
-
-		if not waypointPos then
-			warn("[Waypoints] No waypoint set")
-			return
-		end
-
-		if Client.Modules and Client.Modules.Bot and Client.Modules.Bot.GotoPosition then
-			Client.Modules.Bot.GotoPosition(waypointPos)
-		else
-			warn("[Waypoints] Bot.GotoPosition missing")
-		end
+		hrp.CFrame = CFrame.new(waypointPos + Vector3.new(0,3,0))
 	end)
 
 	clearBtn.MouseButton1Click:Connect(function()
 		waypointPos = nil
 		State.Waypoint = nil
-		if camConn then camConn:Disconnect() end
-		if markerPart then markerPart:Destroy() end
+		if camConn then camConn:Disconnect() camConn = nil end
+		if markerPart then markerPart:Destroy() markerPart = nil end
+		if beam then beam:Destroy() beam = nil end
 	end)
-
-	print("[Waypoints] Loaded OK")
 end
 
 return Waypoints
