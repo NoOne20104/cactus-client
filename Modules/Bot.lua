@@ -1,5 +1,6 @@
--- Reactive Walker v1.4
--- Speed-first build: Goto / Follow + always-visible green path
+-- Reactive Walker v1.5
+-- Goto / Follow bot
+-- HARD DEBUG BUILD: forces visible neon green path
 
 local Bot = {}
 
@@ -12,7 +13,6 @@ function Bot.Init(Client)
 local Players = Client.Services.Players
 local PathfindingService = game:GetService("PathfindingService")
 local LOCAL_PLAYER = Client.Player
-
 local Workspace = workspace
 
 -- =========================
@@ -20,7 +20,6 @@ local Workspace = workspace
 -- =========================
 
 local ARRIVAL_DISTANCE = 5
-local STUCK_TIME = 2
 local FOLLOW_REPATH_DISTANCE = 10
 
 -- =========================
@@ -29,63 +28,71 @@ local FOLLOW_REPATH_DISTANCE = 10
 
 local humanoid, rootPart
 local currentPath, waypoints, waypointIndex
-local lastPos, lastMove = nil, os.clock()
 
 local selectedTarget = nil
 local mode = "idle"
 local lastFollowPos = nil
 
 -- =========================
--- 🌵 Dumb green path system
+-- 🌵 FORCED GREEN SYSTEM
 -- =========================
 
-local PATH_COLOR = Color3.fromRGB(0,255,140)
+local GREEN = Color3.fromRGB(0,255,140)
 local visuals = {}
 
-local function clearPath()
+local function clearGreen()
 	for _,v in ipairs(visuals) do
 		pcall(function() v:Destroy() end)
 	end
 	table.clear(visuals)
 end
 
-local function spawnDot(pos)
+local function makePart(size)
 	local p = Instance.new("Part")
-	p.Shape = Enum.PartType.Ball
-	p.Size = Vector3.new(0.4,0.4,0.4)
 	p.Anchored = true
 	p.CanCollide = false
 	p.Material = Enum.Material.Neon
-	p.Color = PATH_COLOR
-	p.Position = pos
+	p.Color = GREEN
+	p.Size = size
 	p.Parent = Workspace
+	return p
+end
+
+local function drawPoint(pos)
+	local p = makePart(Vector3.new(1,1,1))
+	p.Position = pos + Vector3.new(0,3,0) -- lift above ground
 	table.insert(visuals,p)
 end
 
-local function spawnLine(a,b)
-	local p = Instance.new("Part")
-	p.Anchored = true
-	p.CanCollide = false
-	p.Material = Enum.Material.Neon
-	p.Color = PATH_COLOR
-
+local function drawLine(a,b)
+	local mid = (a+b)/2 + Vector3.new(0,3,0)
 	local dist = (a-b).Magnitude
-	p.Size = Vector3.new(0.12,0.12,dist)
-	p.CFrame = CFrame.lookAt((a+b)/2, b)
-	p.Parent = Workspace
-
+	local p = makePart(Vector3.new(0.4,0.4,dist))
+	p.CFrame = CFrame.lookAt(mid, b + Vector3.new(0,3,0))
 	table.insert(visuals,p)
 end
 
 local function drawPath(points)
-	clearPath()
+	clearGreen()
 	if not points or #points < 2 then return end
 
 	for i,pos in ipairs(points) do
-		spawnDot(pos)
+		drawPoint(pos)
 		if i > 1 then
-			spawnLine(points[i-1], pos)
+			drawLine(points[i-1], pos)
 		end
+	end
+end
+
+-- =========================
+-- 🌵 BOOT TEST (IMPOSSIBLE TO MISS)
+-- =========================
+
+local function spawnGreenTest()
+	for i = 1, 8 do
+		local p = makePart(Vector3.new(2,2,2))
+		p.Position = workspace.CurrentCamera.CFrame.Position + workspace.CurrentCamera.CFrame.LookVector * (i*5)
+		table.insert(visuals,p)
 	end
 end
 
@@ -100,23 +107,8 @@ local function getChar()
 end
 
 -- =========================
--- Bot logic
+-- Path logic
 -- =========================
-
-local function isStuck()
-	if not lastPos then
-		lastPos = rootPart.Position
-		return false
-	end
-
-	if (rootPart.Position - lastPos).Magnitude > 0.6 then
-		lastMove = os.clock()
-		lastPos = rootPart.Position
-		return false
-	end
-
-	return (os.clock() - lastMove) > STUCK_TIME
-end
 
 local function getTargetRoot()
 	if not selectedTarget then return end
@@ -146,7 +138,7 @@ end
 
 local function walk()
 	if not waypoints or not waypoints[waypointIndex] then
-		clearPath()
+		clearGreen()
 		return
 	end
 
@@ -157,12 +149,7 @@ local function walk()
 	end
 
 	humanoid:MoveTo(wp.Position)
-	humanoid.MoveToFinished:Once(function(ok)
-		if not ok or isStuck() then
-			currentPath, waypoints = nil, nil
-			clearPath()
-			return
-		end
+	humanoid.MoveToFinished:Once(function()
 		waypointIndex += 1
 		walk()
 	end)
@@ -170,7 +157,7 @@ end
 
 task.spawn(function()
 	while true do
-		task.wait(0.25)
+		task.wait(0.3)
 
 		if mode == "idle" then continue end
 		local tr = getTargetRoot()
@@ -181,8 +168,7 @@ task.spawn(function()
 
 		if mode == "goto" and dist < ARRIVAL_DISTANCE then
 			mode = "idle"
-			humanoid:Move(Vector3.zero)
-			clearPath()
+			clearGreen()
 			continue
 		end
 
@@ -191,7 +177,7 @@ task.spawn(function()
 			if (lastFollowPos - pos).Magnitude > FOLLOW_REPATH_DISTANCE then
 				currentPath, waypoints = nil, nil
 				lastFollowPos = pos
-				clearPath()
+				clearGreen()
 			end
 		end
 
@@ -204,16 +190,15 @@ task.spawn(function()
 end)
 
 -- =========================
--- GUI
+-- GUI (unchanged cactus style)
 -- =========================
 
 local function createGUI()
 	local Page = Client.Pages.Bot
 	local Theme = Client.Theme
 
-	local ui = Instance.new("Folder")
+	local ui = Instance.new("Folder", Page)
 	ui.Name = "BotUI"
-	ui.Parent = Page
 
 	local frame = Instance.new("Frame", ui)
 	frame.Size = UDim2.new(0,220,0,200)
@@ -236,12 +221,12 @@ local function createGUI()
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.TextColor3 = Theme.TEXT
 
-	local function btn(text,y)
+	local function btn(t,y)
 		local b = Instance.new("TextButton", frame)
 		b.Size = UDim2.new(1,-20,0,30)
 		b.Position = UDim2.new(0,10,0,y)
 		b.BackgroundColor3 = Theme.BUTTON
-		b.Text = text
+		b.Text = t
 		b.Font = Enum.Font.Code
 		b.TextSize = 14
 		b.TextColor3 = Theme.TEXT_DIM
@@ -327,7 +312,7 @@ local function createGUI()
 		if selectedTarget then
 			mode = "goto"
 			currentPath, waypoints = nil, nil
-			clearPath()
+			clearGreen()
 		end
 	end)
 
@@ -336,15 +321,14 @@ local function createGUI()
 			mode = "follow"
 			lastFollowPos = nil
 			currentPath, waypoints = nil, nil
-			clearPath()
+			clearGreen()
 		end
 	end)
 
 	stopBtn.MouseButton1Click:Connect(function()
 		mode = "idle"
 		currentPath, waypoints = nil, nil
-		clearPath()
-		if humanoid then humanoid:Move(Vector3.zero) end
+		clearGreen()
 	end)
 end
 
@@ -355,12 +339,16 @@ end
 getChar()
 createGUI()
 
+spawnGreenTest() -- 🌵 YOU SHOULD SEE GREEN CUBES IN FRONT OF YOU
+
 LOCAL_PLAYER.CharacterAdded:Connect(function()
 	task.wait(1)
 	getChar()
-	clearPath()
+	clearGreen()
+	spawnGreenTest()
 end)
 
 end
 
 return Bot
+
