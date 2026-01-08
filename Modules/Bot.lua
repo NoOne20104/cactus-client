@@ -37,7 +37,7 @@ print("[Cactus Bot] Loaded")
 -- 🌵 Smooth path visual
 -- =========================
 
-local PATH_COLOR = Color3.fromRGB(0, 255, 140) -- cactus neon green
+local PATH_COLOR = Color3.fromRGB(0, 255, 90) -- cactus neon green
 local PATH_RADIUS = 0.06                       -- thin line thickness
 local PATH_LIFT = 0.18                         -- lift off ground slightly
 local PATH_NODE_SIZE = 0.18                    -- little nodes at points
