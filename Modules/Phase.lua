@@ -1,5 +1,6 @@
 -- Phase.lua (Cactus Client Module)
 -- Normal / Smart / Subtle phase movement system
+-- + Proper on/off toggles
 
 local Phase = {}
 
@@ -15,6 +16,7 @@ function Phase.Init(Client)
     local rootPart
     local character
 
+    local enabled = false
     local currentMode = "off"
     local smartConn
 
@@ -74,8 +76,8 @@ function Phase.Init(Client)
 
         cacheParts()
 
-        if currentMode ~= "off" then
-            Phase.SetMode(currentMode)
+        if enabled and currentMode ~= "off" then
+            Phase.SetMode(currentMode, true)
         end
     end
 
@@ -88,7 +90,7 @@ function Phase.Init(Client)
 
         smartConn = RunService.Heartbeat:Connect(function()
             if not rootPart then return end
-            if currentMode ~= "smart" then return end
+            if not enabled or currentMode ~= "smart" then return end
 
             local params = RaycastParams.new()
             params.FilterDescendantsInstances = {character}
@@ -113,10 +115,26 @@ function Phase.Init(Client)
     end
 
     -- =========================
-    -- Mode system
+    -- Core control
     -- =========================
 
-    function Phase.SetMode(mode)
+    local function disablePhase()
+        enabled = false
+        currentMode = "off"
+        stopSmartPhase()
+        restoreCollision()
+        print("[Cactus Phase] Disabled")
+    end
+
+    function Phase.SetMode(mode, force)
+        if not force then
+            if enabled and currentMode == mode then
+                disablePhase()
+                return
+            end
+        end
+
+        enabled = true
         currentMode = mode
 
         stopSmartPhase()
@@ -130,12 +148,13 @@ function Phase.Init(Client)
 
         elseif mode == "subtle" then
             setSubtleCollision()
-
-        elseif mode == "off" then
-            restoreCollision()
         end
 
         print("[Cactus Phase] Mode:", mode)
+    end
+
+    function Phase.Disable()
+        disablePhase()
     end
 
     -- =========================
@@ -200,7 +219,7 @@ function Phase.Init(Client)
         end)
 
         offBtn.MouseButton1Click:Connect(function()
-            Phase.SetMode("off")
+            Phase.Disable()
         end)
     end
 
@@ -218,3 +237,4 @@ function Phase.Init(Client)
 end
 
 return Phase
+
