@@ -32,6 +32,7 @@ function WorldScanner.Init(Client)
 		Spawns = Color3.fromRGB(0,255,120),
 		NPCs = Color3.fromRGB(0,200,255),
 		Interactables = Color3.fromRGB(255,200,0),
+		Items = Color3.fromRGB(255,120,255),
 		WorldParts = Color3.fromRGB(180,180,180),
 	}
 
@@ -43,6 +44,7 @@ function WorldScanner.Init(Client)
 		Spawns = false,
 		NPCs = false,
 		Interactables = false,
+		Items = false,
 		WorldParts = false,
 	}
 
@@ -50,6 +52,7 @@ function WorldScanner.Init(Client)
 		Spawns = {},
 		NPCs = {},
 		Interactables = {},
+		Items = {},
 		WorldParts = {},
 	}
 
@@ -57,6 +60,7 @@ function WorldScanner.Init(Client)
 		Spawns = {},
 		NPCs = {},
 		Interactables = {},
+		Items = {},
 		WorldParts = {},
 	}
 
@@ -178,6 +182,33 @@ function WorldScanner.Init(Client)
 		end
 	end
 
+	-- 🆕 Items you can interact with / pick up / use
+	local function scanItems()
+		clear(Cache.Items)
+
+		for _,d in pairs(workspace:GetDescendants()) do
+
+			-- Tools in workspace
+			if d:IsA("Tool") then
+				table.insert(Cache.Items, d)
+
+			-- Models that look like pickups / usable items
+			elseif d:IsA("Model") then
+				if d:FindFirstChildWhichIsA("ProximityPrompt", true)
+				or d:FindFirstChildWhichIsA("ClickDetector", true) then
+					table.insert(Cache.Items, d)
+				end
+
+			-- Loose parts that act like items
+			elseif d:IsA("BasePart") then
+				local n = d.Name:lower()
+				if n:find("item") or n:find("pickup") or n:find("loot") or n:find("collect") then
+					table.insert(Cache.Items, d)
+				end
+			end
+		end
+	end
+
 	local function scanWorldParts()
 		clear(Cache.WorldParts)
 		for _,p in pairs(workspace:GetDescendants()) do
@@ -191,6 +222,7 @@ function WorldScanner.Init(Client)
 		Spawns = scanSpawns,
 		NPCs = scanNPCs,
 		Interactables = scanInteractables,
+		Items = scanItems,
 		WorldParts = scanWorldParts,
 	}
 
@@ -228,11 +260,11 @@ function WorldScanner.Init(Client)
 	end
 
 	-- =========================
-	-- GUI (layout fixed)
+	-- GUI (layout fixed, wider)
 	-- =========================
 
 	local Panel = Instance.new("Frame")
-	Panel.Size = UDim2.new(0, 260, 1, -12)
+	Panel.Size = UDim2.new(0, 290, 1, -12) -- 🔥 wider
 	Panel.Position = UDim2.fromOffset(0, 0)
 	Panel.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	Panel.BorderSizePixel = 0
@@ -322,6 +354,7 @@ function WorldScanner.Init(Client)
 	makeToggle("Spawns / Zones", "Spawns")
 	makeToggle("NPCs", "NPCs")
 	makeToggle("Interactables", "Interactables")
+	makeToggle("Items", "Items")
 	makeToggle("World Geometry", "WorldParts")
 
 	-- =========================
@@ -351,4 +384,3 @@ function WorldScanner.Init(Client)
 end
 
 return WorldScanner
-
