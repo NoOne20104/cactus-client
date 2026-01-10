@@ -62,14 +62,23 @@ function Fullbright.Init(Client)
 	end
 
 	-- =========================
-	-- Auto Brightness (simple)
+	-- Auto Brightness (FIXED)
 	-- =========================
 
 	local function GetAutoBrightness()
 		local t = Lighting.ClockTime
 		local dist = math.abs(t - 12)
 		local darkness = math.clamp(dist / 12, 0, 1)
-		return 1.8 + (darkness * 1.8)
+
+		-- reacts to time of day
+		local auto = 1.8 + (darkness * 2)
+
+		-- also reacts if the game is set very dark
+		if Lighting.Brightness < 2 then
+			auto += (2 - Lighting.Brightness)
+		end
+
+		return auto
 	end
 
 	-- =========================
@@ -77,6 +86,8 @@ function Fullbright.Init(Client)
 	-- =========================
 
 	local function Apply()
+		if not Enabled then return end
+
 		local finalBrightness = Brightness
 
 		if AutoMode then
