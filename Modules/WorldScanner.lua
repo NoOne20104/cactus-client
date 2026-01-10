@@ -11,7 +11,6 @@ function WorldScanner.Init(Client)
 	-- =========================
 
 	local Players = Client.Services.Players
-	local RunService = Client.Services.RunService
 	local LocalPlayer = Client.Player
 	local Theme = Client.Theme
 	local Page = Client.Pages.WorldScanner
@@ -140,16 +139,29 @@ function WorldScanner.Init(Client)
 	-- Scan logic
 	-- =========================
 
+	-- 🔥 SMART spawn / zone detection
 	local function scanSpawns()
 		clear(Cache.Spawns)
 
 		for _,d in pairs(workspace:GetDescendants()) do
+
+			-- Native Roblox spawns
 			if d:IsA("SpawnLocation") then
 				table.insert(Cache.Spawns, d)
 
+			-- Model-based zones
+			elseif d:IsA("Model") then
+				local n = d.Name:lower()
+				if n:find("spawn") or n:find("zone") or n:find("area")
+				or n:find("region") or n:find("trigger") or n:find("point") then
+					table.insert(Cache.Spawns, d)
+				end
+
+			-- Part-based zones
 			elseif d:IsA("BasePart") then
 				local n = d.Name:lower()
-				if n:find("spawn") or n:find("zone") or n:find("area") then
+				if n:find("spawn") or n:find("zone") or n:find("area")
+				or n:find("region") or n:find("trigger") or n:find("point") then
 					table.insert(Cache.Spawns, d)
 				end
 			end
@@ -158,7 +170,6 @@ function WorldScanner.Init(Client)
 
 	local function scanNPCs()
 		clear(Cache.NPCs)
-
 		for _,m in pairs(workspace:GetDescendants()) do
 			if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") then
 				if not Players:GetPlayerFromCharacter(m) then
@@ -170,7 +181,6 @@ function WorldScanner.Init(Client)
 
 	local function scanInteractables()
 		clear(Cache.Interactables)
-
 		for _,d in pairs(workspace:GetDescendants()) do
 			if d:IsA("ProximityPrompt") or d:IsA("ClickDetector") then
 				if d.Parent then
@@ -182,7 +192,6 @@ function WorldScanner.Init(Client)
 
 	local function scanWorldParts()
 		clear(Cache.WorldParts)
-
 		for _,p in pairs(workspace:GetDescendants()) do
 			if p:IsA("BasePart") and p.Anchored and p.Size.Magnitude > 40 then
 				table.insert(Cache.WorldParts, p)
@@ -231,11 +240,11 @@ function WorldScanner.Init(Client)
 	end
 
 	-- =========================
-	-- GUI
+	-- GUI (scrolling)
 	-- =========================
 
 	local Panel = Instance.new("Frame")
-	Panel.Size = UDim2.fromOffset(220, 330)
+	Panel.Size = UDim2.fromOffset(220, 300)
 	Panel.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	Panel.BorderSizePixel = 0
 	Panel.Parent = Page
@@ -246,7 +255,7 @@ function WorldScanner.Init(Client)
 	stroke.Thickness = 1
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1,0,0,26)
+	title.Size = UDim2.new(1,0,0,28)
 	title.BackgroundTransparency = 1
 	title.Text = "World Scanner"
 	title.Font = Enum.Font.Code
@@ -254,31 +263,58 @@ function WorldScanner.Init(Client)
 	title.TextColor3 = Theme.TEXT
 	title.Parent = Panel
 
-	local y = 36
+	-- Scrolling container
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Position = UDim2.new(0,0,0,28)
+	scroll.Size = UDim2.new(1,0,1,-28)
+	scroll.CanvasSize = UDim2.new(0,0,0,0)
+	scroll.ScrollBarThickness = 4
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.Parent = Panel
+
+	local layout = Instance.new("UIListLayout", scroll)
+	layout.Padding = UDim.new(0,10)
+
+	local pad = Instance.new("UIPadding", scroll)
+	pad.PaddingTop = UDim.new(0,10)
+	pad.PaddingLeft = UDim.new(0,6)
+	pad.PaddingRight = UDim.new(0,6)
+	pad.PaddingBottom = UDim.new(0,10)
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
+	end)
+
 	local infoLabels = {}
 
 	local function makeToggle(label, key)
+		local holder = Instance.new("Frame")
+		holder.Size = UDim2.new(1,0,0,48)
+		holder.BackgroundTransparency = 1
+		holder.Parent = scroll
+
 		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(1,-12,0,26)
-		btn.Position = UDim2.new(0,6,0,y)
+		btn.Size = UDim2.new(1,0,0,26)
 		btn.BackgroundColor3 = Theme.BUTTON
 		btn.Text = label .. " : OFF"
 		btn.Font = Enum.Font.Code
 		btn.TextSize = 13
 		btn.TextColor3 = Theme.TEXT_DIM
-		btn.Parent = Panel
+		btn.Parent = holder
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
 		local info = Instance.new("TextLabel")
-		info.Size = UDim2.new(1,-12,0,18)
-		info.Position = UDim2.new(0,6,0,y+26)
+		info.Position = UDim2.new(0,2,0,28)
+		info.Size = UDim2.new(1,-4,0,18)
 		info.BackgroundTransparency = 1
 		info.Font = Enum.Font.Code
 		info.TextSize = 12
 		info.TextXAlignment = Enum.TextXAlignment.Left
 		info.TextColor3 = Theme.TEXT_DIM
 		info.Text = ""
-		info.Parent = Panel
+		info.Parent = holder
 
 		infoLabels[key] = info
 
@@ -294,8 +330,6 @@ function WorldScanner.Init(Client)
 				info.Text = ""
 			end
 		end)
-
-		y += 48
 	end
 
 	makeToggle("Spawns / Zones", "Spawns")
@@ -330,3 +364,4 @@ function WorldScanner.Init(Client)
 end
 
 return WorldScanner
+
