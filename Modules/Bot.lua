@@ -346,10 +346,24 @@ local function createGUI()
 				Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
 				btn.MouseButton1Click:Connect(function()
-					selectedTargetPlayer = plr
-					selectedLabel.Text = "Target: " .. plr.Name
-					dropdown.Visible = false
-				end)
+    selectedTargetPlayer = plr
+    selectedLabel.Text = "Target: " .. plr.Name
+    dropdown.Visible = false
+
+    --  HARD RESET BOT STATE
+    currentPath = nil
+    waypoints = nil
+    waypointIndex = 1
+    moving = false
+    lastFollowTargetPos = nil
+    clearPathVisual()
+
+    -- optional: auto-start movement
+    if currentMode ~= "idle" then
+        currentMode = "goto"
+    end
+end)
+
 			end
 		end
 
