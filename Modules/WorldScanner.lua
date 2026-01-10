@@ -139,26 +139,14 @@ function WorldScanner.Init(Client)
 	-- Scan logic
 	-- =========================
 
-	-- 🔥 SMART spawn / zone detection
 	local function scanSpawns()
 		clear(Cache.Spawns)
 
 		for _,d in pairs(workspace:GetDescendants()) do
-
-			-- Native Roblox spawns
 			if d:IsA("SpawnLocation") then
 				table.insert(Cache.Spawns, d)
 
-			-- Model-based zones
-			elseif d:IsA("Model") then
-				local n = d.Name:lower()
-				if n:find("spawn") or n:find("zone") or n:find("area")
-				or n:find("region") or n:find("trigger") or n:find("point") then
-					table.insert(Cache.Spawns, d)
-				end
-
-			-- Part-based zones
-			elseif d:IsA("BasePart") then
+			elseif d:IsA("Model") or d:IsA("BasePart") then
 				local n = d.Name:lower()
 				if n:find("spawn") or n:find("zone") or n:find("area")
 				or n:find("region") or n:find("trigger") or n:find("point") then
@@ -240,11 +228,12 @@ function WorldScanner.Init(Client)
 	end
 
 	-- =========================
-	-- GUI (scrolling)
+	-- GUI (layout fixed)
 	-- =========================
 
 	local Panel = Instance.new("Frame")
-	Panel.Size = UDim2.fromOffset(220, 300)
+	Panel.Size = UDim2.new(0, 260, 1, -12)
+	Panel.Position = UDim2.fromOffset(0, 0)
 	Panel.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	Panel.BorderSizePixel = 0
 	Panel.Parent = Page
@@ -263,13 +252,11 @@ function WorldScanner.Init(Client)
 	title.TextColor3 = Theme.TEXT
 	title.Parent = Panel
 
-	-- Scrolling container
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Position = UDim2.new(0,0,0,28)
 	scroll.Size = UDim2.new(1,0,1,-28)
 	scroll.CanvasSize = UDim2.new(0,0,0,0)
 	scroll.ScrollBarThickness = 4
-	scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.Parent = Panel
