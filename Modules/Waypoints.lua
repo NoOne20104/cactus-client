@@ -55,9 +55,10 @@ function Waypoints.Init(Client)
 		return b
 	end
 
-	local setBtn = makeButton("Set Waypoint", 40)
-	local tpBtn = makeButton("Teleport to Waypoint", 75)
-	local clearBtn = makeButton("Clear Waypoint", 110)
+local setBtn = makeButton("Set Waypoint", 40)
+local tpBtn = makeButton("Teleport to Waypoint", 75)
+local walkBtn = makeButton("Walk to Waypoint", 110)
+local clearBtn = makeButton("Clear Waypoint", 145)
 
 	-- =========================
 	-- Marker
@@ -134,6 +135,14 @@ function Waypoints.Init(Client)
 		if not char then return end
 		local hrp = char:FindFirstChild("HumanoidRootPart")
 		if not hrp then return end
+
+	walkBtn.MouseButton1Click:Connect(function()
+	if not waypointPos then return end
+	if not Client.Modules then return end
+	if not Client.Modules.Bot then return end
+
+	Client.Modules.Bot:GotoPosition(waypointPos)
+end)
 
 		hrp.CFrame = CFrame.new(waypointPos + Vector3.new(0,3,0))
 	end)
