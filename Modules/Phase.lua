@@ -1,6 +1,6 @@
 -- Phase.lua (Cactus Client Module)
 -- Normal / Smart / Subtle phase movement system
--- + Proper on/off toggles
+-- + Visual on/off state
 
 local Phase = {}
 
@@ -31,7 +31,6 @@ function Phase.Init(Client)
     local function cacheParts()
         cachedParts = {}
         if not character then return end
-
         for _,v in ipairs(character:GetDescendants()) do
             if v:IsA("BasePart") then
                 cachedParts[v] = v.CanCollide
@@ -123,6 +122,7 @@ function Phase.Init(Client)
         currentMode = "off"
         stopSmartPhase()
         restoreCollision()
+        if refreshUI then refreshUI() end
         print("[Cactus Phase] Disabled")
     end
 
@@ -142,14 +142,13 @@ function Phase.Init(Client)
 
         if mode == "normal" then
             setAllCollision(false)
-
         elseif mode == "smart" then
             startSmartPhase()
-
         elseif mode == "subtle" then
             setSubtleCollision()
         end
 
+        if refreshUI then refreshUI() end
         print("[Cactus Phase] Mode:", mode)
     end
 
@@ -160,6 +159,28 @@ function Phase.Init(Client)
     -- =========================
     -- GUI
     -- =========================
+
+    local normalBtn, smartBtn, subtleBtn, offBtn
+
+    function refreshUI()
+        normalBtn.Text = "Normal Phase"
+        smartBtn.Text  = "Smart Phase"
+        subtleBtn.Text = "Subtle Phase"
+        offBtn.Text    = "Disable Phase"
+
+        if not enabled then
+            offBtn.Text = "Phase: OFF"
+            return
+        end
+
+        if currentMode == "normal" then
+            normalBtn.Text = "Normal Phase  [ON]"
+        elseif currentMode == "smart" then
+            smartBtn.Text = "Smart Phase  [ON]"
+        elseif currentMode == "subtle" then
+            subtleBtn.Text = "Subtle Phase  [ON]"
+        end
+    end
 
     local function createGUI()
 
@@ -201,10 +222,10 @@ function Phase.Init(Client)
             return b
         end
 
-        local normalBtn = makeButton("Normal Phase", 36)
-        local smartBtn  = makeButton("Smart Phase", 76)
-        local subtleBtn = makeButton("Subtle Phase", 116)
-        local offBtn    = makeButton("Disable Phase", 156)
+        normalBtn = makeButton("Normal Phase", 36)
+        smartBtn  = makeButton("Smart Phase", 76)
+        subtleBtn = makeButton("Subtle Phase", 116)
+        offBtn    = makeButton("Disable Phase", 156)
 
         normalBtn.MouseButton1Click:Connect(function()
             Phase.SetMode("normal")
@@ -221,6 +242,8 @@ function Phase.Init(Client)
         offBtn.MouseButton1Click:Connect(function()
             Phase.Disable()
         end)
+
+        refreshUI()
     end
 
     -- =========================
@@ -233,8 +256,8 @@ function Phase.Init(Client)
     LocalPlayer.CharacterAdded:Connect(function()
         task.wait(1)
         getCharacter()
+        refreshUI()
     end)
 end
 
 return Phase
-
