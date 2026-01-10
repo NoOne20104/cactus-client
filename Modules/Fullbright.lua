@@ -1,6 +1,6 @@
 -- Fullbright.lua
 -- Cactus Client – Environment / Visibility Tool
--- Adjustable Fullbright + Gamma
+-- Adjustable Fullbright + Gamma + Auto Mode
 -- Safe state caching & restore
 
 local Fullbright = {}
@@ -13,6 +13,7 @@ function Fullbright.Init(Client)
 
 	local Lighting = game:GetService("Lighting")
 	local RunService = game:GetService("RunService")
+	local UserInputService = game:GetService("UserInputService")
 
 	local Page = Client.Pages.Fullbright
 	local Theme = Client.Theme
@@ -29,6 +30,8 @@ function Fullbright.Init(Client)
 	-- =========================
 
 	local Enabled = false
+	local AutoMode = false
+
 	local Brightness = 2
 	local Gamma = 1
 
@@ -59,15 +62,32 @@ function Fullbright.Init(Client)
 	end
 
 	-- =========================
+	-- Auto Brightness (simple)
+	-- =========================
+
+	local function GetAutoBrightness()
+		local t = Lighting.ClockTime
+		local dist = math.abs(t - 12)
+		local darkness = math.clamp(dist / 12, 0, 1)
+		return 1.8 + (darkness * 1.8)
+	end
+
+	-- =========================
 	-- Apply Fullbright
 	-- =========================
 
 	local function Apply()
+		local finalBrightness = Brightness
+
+		if AutoMode then
+			finalBrightness = GetAutoBrightness()
+		end
+
 		Lighting.GlobalShadows = false
 		Lighting.Ambient = Color3.fromRGB(255,255,255)
 		Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
 		Lighting.FogEnd = 1e6
-		Lighting.Brightness = Brightness
+		Lighting.Brightness = finalBrightness
 		Lighting.ExposureCompensation = Gamma
 	end
 
@@ -106,7 +126,7 @@ function Fullbright.Init(Client)
 	-- =========================
 
 	local Panel = Instance.new("Frame")
-	Panel.Size = UDim2.new(0,260,0,170)
+	Panel.Size = UDim2.new(0,260,0,205)
 	Panel.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	Panel.BorderSizePixel = 0
 	Panel.Parent = Page
@@ -149,6 +169,33 @@ function Fullbright.Init(Client)
 			Disable()
 			toggle.Text = "Fullbright : OFF"
 			toggle.TextColor3 = Theme.TEXT_DIM
+		end
+	end)
+
+	-- =========================
+	-- Auto Mode Button
+	-- =========================
+
+	local autoBtn = Instance.new("TextButton")
+	autoBtn.Position = UDim2.new(0,8,0,66)
+	autoBtn.Size = UDim2.new(1,-16,0,24)
+	autoBtn.BackgroundColor3 = Theme.BUTTON
+	autoBtn.Text = "Auto Mode : OFF"
+	autoBtn.Font = Enum.Font.Code
+	autoBtn.TextSize = 12
+	autoBtn.TextColor3 = Theme.TEXT_DIM
+	autoBtn.Parent = Panel
+	Instance.new("UICorner", autoBtn).CornerRadius = UDim.new(0,6)
+
+	autoBtn.MouseButton1Click:Connect(function()
+		AutoMode = not AutoMode
+
+		if AutoMode then
+			autoBtn.Text = "Auto Mode : ON"
+			autoBtn.TextColor3 = Theme.TEXT
+		else
+			autoBtn.Text = "Auto Mode : OFF"
+			autoBtn.TextColor3 = Theme.TEXT_DIM
 		end
 	end)
 
@@ -200,7 +247,7 @@ function Fullbright.Init(Client)
 
 		RunService.RenderStepped:Connect(function()
 			if dragging then
-				local mouseX = game:GetService("UserInputService"):GetMouseLocation().X
+				local mouseX = UserInputService:GetMouseLocation().X
 				local rel = math.clamp((mouseX - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
 				fill.Size = UDim2.new(rel,0,1,0)
 
@@ -217,13 +264,14 @@ function Fullbright.Init(Client)
 	-- Sliders
 	-- =========================
 
-	MakeSlider("Brightness", 72, 0.5, 5, Brightness, function(v)
+	MakeSlider("Brightness", 98, 0.5, 5, Brightness, function(v)
 		Brightness = v
 	end)
 
-	MakeSlider("Gamma", 114, 0, 3, Gamma, function(v)
+	MakeSlider("Gamma", 140, 0, 3, Gamma, function(v)
 		Gamma = v
 	end)
 end
 
 return Fullbright
+
