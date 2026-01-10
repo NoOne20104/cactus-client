@@ -235,7 +235,23 @@ function Bot.Init(Client)
 			task.wait(0.3)
 
 			local targetRoot = getTargetRoot()
-			if not targetRoot or currentMode == "idle" then continue end
+
+if not targetRoot then
+	-- target vanished, hard reset bot
+	currentMode = "idle"
+	selectedTargetPlayer = nil
+	externalTargetPosition = nil
+	currentPath = nil
+	waypoints = nil
+	waypointIndex = 1
+	lastFollowTargetPos = nil
+	clearPathVisual()
+	continue
+end
+
+if currentMode == "idle" then
+	continue
+end
 
 			local targetPos = targetRoot.Position
 			local dist = (rootPart.Position - targetPos).Magnitude
