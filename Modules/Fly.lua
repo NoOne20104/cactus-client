@@ -41,31 +41,24 @@ function Fly.Init(Client)
 
 	local function stopBot()
 		if Client.Modules and Client.Modules.Bot then
-			-- simulate pressing Stop
 			if Client.Modules.Bot.Stop then
 				Client.Modules.Bot:Stop()
 			end
 		end
 	end
 
+	-- REAL Phase API
 	local function phaseOn()
 		local Phase = Client.Modules and Client.Modules.Phase
-		if not Phase then return end
-
-		-- defensive calls
-		if Phase.Enable then Phase:Enable()
-		elseif Phase.SetEnabled then Phase:SetEnabled(true)
-		elseif Phase.Toggle then Phase:Toggle(true)
+		if Phase and Phase.SetMode then
+			Phase.SetMode("normal", true)
 		end
 	end
 
 	local function phaseOff()
 		local Phase = Client.Modules and Client.Modules.Phase
-		if not Phase then return end
-
-		if Phase.Disable then Phase:Disable()
-		elseif Phase.SetEnabled then Phase:SetEnabled(false)
-		elseif Phase.Toggle then Phase:Toggle(false)
+		if Phase and Phase.Disable then
+			Phase.Disable()
 		end
 	end
 
@@ -209,6 +202,13 @@ function Fly.Init(Client)
 	slider.Parent = frame
 	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
 
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new(0.25,0,1,0)
+	fill.BackgroundColor3 = Theme.TEXT
+	fill.BorderSizePixel = 0
+	fill.Parent = slider
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
+
 	local dragging = false
 	slider.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
@@ -228,6 +228,7 @@ function Fly.Init(Client)
 
 		Fly.Speed = math.floor(20 + rel * 180)
 		speedLabel.Text = "Speed: " .. Fly.Speed
+		fill.Size = UDim2.new(rel,0,1,0)
 	end)
 
 	-- =========================
