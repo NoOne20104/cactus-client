@@ -29,7 +29,7 @@ function Fly.Init(Client)
 	local saved = {}
 
 	-- =========================
-	-- Utilities
+	-- Utilities (UNCHANGED)
 	-- =========================
 
 	local function getChar()
@@ -60,7 +60,7 @@ function Fly.Init(Client)
 	end
 
 	-- =========================
-	-- Fly Core
+	-- Fly Core (UNCHANGED)
 	-- =========================
 
 	local function startFly()
@@ -140,11 +140,11 @@ function Fly.Init(Client)
 	end
 
 	-- =========================
-	-- GUI
+	-- GUI (REBUILT CLEANLY)
 	-- =========================
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0,220,0,200)
+	frame.Size = UDim2.new(0,220,0,230)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -156,7 +156,7 @@ function Fly.Init(Client)
 	stroke.Transparency = 0.4
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1,-10,0,28)
+	title.Size = UDim2.new(1,-12,0,26)
 	title.Position = UDim2.new(0,10,0,4)
 	title.BackgroundTransparency = 1
 	title.Text = "Fly"
@@ -166,45 +166,55 @@ function Fly.Init(Client)
 	title.TextColor3 = Theme.TEXT
 	title.Parent = frame
 
-	local function makeButton(text,y)
+	-- holder uses layout (no overlap possible)
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(1,-20,1,-40)
+	holder.Position = UDim2.new(0,10,0,36)
+	holder.BackgroundTransparency = 1
+	holder.Parent = frame
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0,6)
+	layout.Parent = holder
+
+	local function makeButton(text)
 		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(1,-20,0,30)
-		b.Position = UDim2.new(0,10,0,y)
+		b.Size = UDim2.new(1,0,0,30)
 		b.BackgroundColor3 = Theme.BUTTON
 		b.Text = text
 		b.Font = Enum.Font.Code
 		b.TextSize = 14
 		b.TextColor3 = Theme.TEXT_DIM
 		b.BorderSizePixel = 0
-		b.Parent = frame
+		b.Parent = holder
 		Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
 		return b
 	end
 
-	local NORMAL_Y = 40
-	local PHASE_Y = 75
-	local SLIDER_SPACE = 44
+	local normalBtn = makeButton("Normal Fly : OFF")
 
-	local normalBtn = makeButton("Normal Fly : OFF", NORMAL_Y)
-	local phaseBtn  = makeButton("Phase Fly : OFF", PHASE_Y)
+	local speedBlock = Instance.new("Frame")
+	speedBlock.Size = UDim2.new(1,0,0,44)
+	speedBlock.BackgroundTransparency = 1
+	speedBlock.Visible = false
+	speedBlock.Parent = holder
 
 	local speedLabel = Instance.new("TextLabel")
-	speedLabel.Size = UDim2.new(1,-20,0,20)
+	speedLabel.Size = UDim2.new(1,0,0,18)
 	speedLabel.BackgroundTransparency = 1
 	speedLabel.Text = "Speed: 60"
 	speedLabel.Font = Enum.Font.Code
 	speedLabel.TextSize = 13
 	speedLabel.TextXAlignment = Enum.TextXAlignment.Left
 	speedLabel.TextColor3 = Theme.TEXT_DIM
-	speedLabel.Visible = false
-	speedLabel.Parent = frame
+	speedLabel.Parent = speedBlock
 
 	local slider = Instance.new("TextButton")
-	slider.Size = UDim2.new(1,-20,0,8)
+	slider.Size = UDim2.new(1,0,0,8)
+	slider.Position = UDim2.new(0,0,0,24)
 	slider.BackgroundColor3 = Theme.BUTTON
 	slider.Text = ""
-	slider.Visible = false
-	slider.Parent = frame
+	slider.Parent = speedBlock
 	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
 
 	local stroke2 = Instance.new("UIStroke", slider)
@@ -219,34 +229,10 @@ function Fly.Init(Client)
 	fill.Parent = slider
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
-	-- =========================
-	-- Layout Control
-	-- =========================
-
-	local function placeSliderUnder(button)
-		phaseBtn.Position = UDim2.new(0,10,0,PHASE_Y)
-
-		local y = button.Position.Y.Offset + button.Size.Y.Offset + 6
-
-		if button == normalBtn then
-			phaseBtn.Position = UDim2.new(0,10,0,PHASE_Y + SLIDER_SPACE)
-		end
-
-		speedLabel.Position = UDim2.new(0,10,0,y)
-		slider.Position = UDim2.new(0,10,0,y + 20)
-
-		speedLabel.Visible = true
-		slider.Visible = true
-	end
-
-	local function hideSlider()
-		speedLabel.Visible = false
-		slider.Visible = false
-		phaseBtn.Position = UDim2.new(0,10,0,PHASE_Y)
-	end
+	local phaseBtn = makeButton("Phase Fly : OFF")
 
 	-- =========================
-	-- Slider Input
+	-- Slider Input (UNCHANGED)
 	-- =========================
 
 	local dragging = false
@@ -274,13 +260,13 @@ function Fly.Init(Client)
 	end)
 
 	-- =========================
-	-- Buttons
+	-- Buttons (logic unchanged)
 	-- =========================
 
 	normalBtn.MouseButton1Click:Connect(function()
 		if Fly.Enabled and Fly.Mode == "normal" then
 			stopFly()
-			hideSlider()
+			speedBlock.Visible = false
 			normalBtn.Text = "Normal Fly : OFF"
 			normalBtn.TextColor3 = Theme.TEXT_DIM
 			return
@@ -291,7 +277,7 @@ function Fly.Init(Client)
 		phaseBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		placeSliderUnder(normalBtn)
+		speedBlock.Visible = true
 
 		normalBtn.Text = "Normal Fly : ON"
 		normalBtn.TextColor3 = Theme.TEXT
@@ -300,7 +286,7 @@ function Fly.Init(Client)
 	phaseBtn.MouseButton1Click:Connect(function()
 		if Fly.Enabled and Fly.Mode == "phase" then
 			stopFly()
-			hideSlider()
+			speedBlock.Visible = false
 			phaseBtn.Text = "Phase Fly : OFF"
 			phaseBtn.TextColor3 = Theme.TEXT_DIM
 			return
@@ -311,7 +297,7 @@ function Fly.Init(Client)
 		normalBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		placeSliderUnder(phaseBtn)
+		speedBlock.Visible = true
 
 		phaseBtn.Text = "Phase Fly : ON"
 		phaseBtn.TextColor3 = Theme.TEXT
@@ -319,6 +305,7 @@ function Fly.Init(Client)
 end
 
 return Fly
+
 
 
 
