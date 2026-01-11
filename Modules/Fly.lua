@@ -140,7 +140,7 @@ function Fly.Init(Client)
 	end
 
 	-- =========================
-	-- GUI (REBUILT CLEANLY)
+	-- GUI (reflow + movable speed block)
 	-- =========================
 
 	local frame = Instance.new("Frame")
@@ -166,7 +166,6 @@ function Fly.Init(Client)
 	title.TextColor3 = Theme.TEXT
 	title.Parent = frame
 
-	-- holder uses layout (no overlap possible)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1,-20,1,-40)
 	holder.Position = UDim2.new(0,10,0,36)
@@ -177,7 +176,7 @@ function Fly.Init(Client)
 	layout.Padding = UDim.new(0,6)
 	layout.Parent = holder
 
-	local function makeButton(text)
+	local function makeButton(text, order)
 		local b = Instance.new("TextButton")
 		b.Size = UDim2.new(1,0,0,30)
 		b.BackgroundColor3 = Theme.BUTTON
@@ -186,18 +185,22 @@ function Fly.Init(Client)
 		b.TextSize = 14
 		b.TextColor3 = Theme.TEXT_DIM
 		b.BorderSizePixel = 0
+		b.LayoutOrder = order
 		b.Parent = holder
 		Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
 		return b
 	end
 
-	local normalBtn = makeButton("Normal Fly : OFF")
+	local normalBtn = makeButton("Normal Fly : OFF", 1)
+	local phaseBtn  = makeButton("Phase Fly : OFF", 2)
 
+	-- speed block (movable)
 	local speedBlock = Instance.new("Frame")
 	speedBlock.Size = UDim2.new(1,0,0,44)
 	speedBlock.BackgroundTransparency = 1
 	speedBlock.Visible = false
-	speedBlock.Parent = holder
+	speedBlock.LayoutOrder = 99
+	speedBlock.Parent = nil
 
 	local speedLabel = Instance.new("TextLabel")
 	speedLabel.Size = UDim2.new(1,0,0,18)
@@ -229,10 +232,23 @@ function Fly.Init(Client)
 	fill.Parent = slider
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
-	local phaseBtn = makeButton("Phase Fly : OFF")
+	-- =========================
+	-- Speed block control
+	-- =========================
+
+	local function showSpeedUnder(button)
+		speedBlock.Parent = holder
+		speedBlock.LayoutOrder = button.LayoutOrder + 1
+		speedBlock.Visible = true
+	end
+
+	local function hideSpeed()
+		speedBlock.Visible = false
+		speedBlock.Parent = nil
+	end
 
 	-- =========================
-	-- Slider Input (UNCHANGED)
+	-- Slider input (UNCHANGED)
 	-- =========================
 
 	local dragging = false
@@ -266,7 +282,7 @@ function Fly.Init(Client)
 	normalBtn.MouseButton1Click:Connect(function()
 		if Fly.Enabled and Fly.Mode == "normal" then
 			stopFly()
-			speedBlock.Visible = false
+			hideSpeed()
 			normalBtn.Text = "Normal Fly : OFF"
 			normalBtn.TextColor3 = Theme.TEXT_DIM
 			return
@@ -277,7 +293,7 @@ function Fly.Init(Client)
 		phaseBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		speedBlock.Visible = true
+		showSpeedUnder(normalBtn)
 
 		normalBtn.Text = "Normal Fly : ON"
 		normalBtn.TextColor3 = Theme.TEXT
@@ -286,7 +302,7 @@ function Fly.Init(Client)
 	phaseBtn.MouseButton1Click:Connect(function()
 		if Fly.Enabled and Fly.Mode == "phase" then
 			stopFly()
-			speedBlock.Visible = false
+			hideSpeed()
 			phaseBtn.Text = "Phase Fly : OFF"
 			phaseBtn.TextColor3 = Theme.TEXT_DIM
 			return
@@ -297,7 +313,7 @@ function Fly.Init(Client)
 		normalBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		speedBlock.Visible = true
+		showSpeedUnder(phaseBtn)
 
 		phaseBtn.Text = "Phase Fly : ON"
 		phaseBtn.TextColor3 = Theme.TEXT
