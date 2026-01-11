@@ -273,7 +273,7 @@ function Fly.Init(Client)
 		phaseBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		placeSlider(75)
+		placeSlider(40)
 		normalBtn.Text = "Normal Fly : ON"
 		normalBtn.TextColor3 = Theme.TEXT
 	end)
