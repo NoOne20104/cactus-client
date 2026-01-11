@@ -181,8 +181,12 @@ function Fly.Init(Client)
 		return b
 	end
 
-	local normalBtn = makeButton("Normal Fly : OFF", 40)
-	local phaseBtn  = makeButton("Phase Fly : OFF", 75)
+	local NORMAL_Y = 40
+	local PHASE_Y = 75
+	local SLIDER_SPACE = 44
+
+	local normalBtn = makeButton("Normal Fly : OFF", NORMAL_Y)
+	local phaseBtn  = makeButton("Phase Fly : OFF", PHASE_Y)
 
 	local speedLabel = Instance.new("TextLabel")
 	speedLabel.Size = UDim2.new(1,-20,0,20)
@@ -215,12 +219,22 @@ function Fly.Init(Client)
 	fill.Parent = slider
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
-	-- 🔧 FIXED PLACEMENT (button-based)
+	-- =========================
+	-- Layout Control
+	-- =========================
 
 	local function placeSliderUnder(button)
+		phaseBtn.Position = UDim2.new(0,10,0,PHASE_Y)
+
 		local y = button.Position.Y.Offset + button.Size.Y.Offset + 6
+
+		if button == normalBtn then
+			phaseBtn.Position = UDim2.new(0,10,0,PHASE_Y + SLIDER_SPACE)
+		end
+
 		speedLabel.Position = UDim2.new(0,10,0,y)
 		slider.Position = UDim2.new(0,10,0,y + 20)
+
 		speedLabel.Visible = true
 		slider.Visible = true
 	end
@@ -228,11 +242,15 @@ function Fly.Init(Client)
 	local function hideSlider()
 		speedLabel.Visible = false
 		slider.Visible = false
+		phaseBtn.Position = UDim2.new(0,10,0,PHASE_Y)
 	end
 
-	-- slider input
+	-- =========================
+	-- Slider Input
+	-- =========================
 
 	local dragging = false
+
 	slider.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
 	end)
@@ -274,6 +292,7 @@ function Fly.Init(Client)
 
 		startFly()
 		placeSliderUnder(normalBtn)
+
 		normalBtn.Text = "Normal Fly : ON"
 		normalBtn.TextColor3 = Theme.TEXT
 	end)
@@ -293,11 +312,13 @@ function Fly.Init(Client)
 
 		startFly()
 		placeSliderUnder(phaseBtn)
+
 		phaseBtn.Text = "Phase Fly : ON"
 		phaseBtn.TextColor3 = Theme.TEXT
 	end)
 end
 
 return Fly
+
 
 
