@@ -17,7 +17,7 @@ function Fly.Init(Client)
 	-- =========================
 
 	Fly.Enabled = false
-	Fly.Mode = "normal" -- normal | phase
+	Fly.Mode = "normal"
 	Fly.Speed = 60
 
 	local humanoid
@@ -40,14 +40,11 @@ function Fly.Init(Client)
 	end
 
 	local function stopBot()
-		if Client.Modules and Client.Modules.Bot then
-			if Client.Modules.Bot.Stop then
-				Client.Modules.Bot:Stop()
-			end
+		if Client.Modules and Client.Modules.Bot and Client.Modules.Bot.Stop then
+			Client.Modules.Bot:Stop()
 		end
 	end
 
-	-- REAL Phase API
 	local function phaseOn()
 		local Phase = Client.Modules and Client.Modules.Phase
 		if Phase and Phase.SetMode then
@@ -72,7 +69,6 @@ function Fly.Init(Client)
 		if not humanoid or not root then return end
 
 		stopBot()
-
 		Fly.Enabled = true
 
 		saved.AutoRotate = humanoid.AutoRotate
@@ -85,7 +81,6 @@ function Fly.Init(Client)
 
 		bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-		bv.Velocity = Vector3.zero
 		bv.Parent = root
 
 		bg = Instance.new("BodyGyro")
@@ -100,7 +95,6 @@ function Fly.Init(Client)
 		moveConn = RunService.RenderStepped:Connect(function()
 			if not Fly.Enabled then return end
 
-			-- enforce normal phase continuously
 			if Fly.Mode == "phase" then
 				local Phase = Client.Modules and Client.Modules.Phase
 				if Phase and Phase.SetMode then
@@ -202,17 +196,17 @@ function Fly.Init(Client)
 	speedLabel.Parent = frame
 
 	local slider = Instance.new("TextButton")
-	slider.Size = UDim2.new(1,-20,0,8) -- thinner
+	slider.Size = UDim2.new(1,-20,0,8)
 	slider.BackgroundColor3 = Theme.BUTTON
 	slider.Text = ""
 	slider.Visible = false
 	slider.Parent = frame
 	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
 
-	local sliderStroke = Instance.new("UIStroke", slider)
-	sliderStroke.Color = Theme.STROKE
-	sliderStroke.Transparency = 0.7
-	sliderStroke.Thickness = 1
+	local stroke2 = Instance.new("UIStroke", slider)
+	stroke2.Color = Theme.STROKE
+	stroke2.Transparency = 0.7
+	stroke2.Thickness = 1
 
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0.25,0,1,0)
@@ -221,9 +215,12 @@ function Fly.Init(Client)
 	fill.Parent = slider
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
-	local function placeSlider(y)
+	-- 🔧 FIXED PLACEMENT (button-based)
+
+	local function placeSliderUnder(button)
+		local y = button.Position.Y.Offset + button.Size.Y.Offset + 6
 		speedLabel.Position = UDim2.new(0,10,0,y)
-		slider.Position = UDim2.new(0,10,0,y + 22)
+		slider.Position = UDim2.new(0,10,0,y + 20)
 		speedLabel.Visible = true
 		slider.Visible = true
 	end
@@ -233,10 +230,13 @@ function Fly.Init(Client)
 		slider.Visible = false
 	end
 
+	-- slider input
+
 	local dragging = false
 	slider.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
 	end)
+
 	slider.InputEnded:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 	end)
@@ -273,7 +273,7 @@ function Fly.Init(Client)
 		phaseBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		placeSlider(40)
+		placeSliderUnder(normalBtn)
 		normalBtn.Text = "Normal Fly : ON"
 		normalBtn.TextColor3 = Theme.TEXT
 	end)
@@ -292,11 +292,12 @@ function Fly.Init(Client)
 		normalBtn.TextColor3 = Theme.TEXT_DIM
 
 		startFly()
-		placeSlider(110)
+		placeSliderUnder(phaseBtn)
 		phaseBtn.Text = "Phase Fly : ON"
 		phaseBtn.TextColor3 = Theme.TEXT
 	end)
 end
 
 return Fly
+
 
