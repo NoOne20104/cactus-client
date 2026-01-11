@@ -99,7 +99,15 @@ function Fly.Init(Client)
 		end
 
 		moveConn = RunService.RenderStepped:Connect(function()
-			if not Fly.Enabled then return end
+	if not Fly.Enabled then return end
+
+	-- >>> ENFORCE NORMAL PHASE WHILE FLY PHASE IS ACTIVE
+	if Fly.Mode == "phase" then
+		local Phase = Client.Modules and Client.Modules.Phase
+		if Phase and Phase.SetMode then
+			Phase.SetMode("normal", true)
+		end
+	end
 
 			local cam = workspace.CurrentCamera
 			if not cam then return end
