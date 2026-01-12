@@ -7,7 +7,6 @@ function Freecam.Init(Client)
 	-- =========================
 
 	local UIS = game:GetService("UserInputService")
-	local CAS = game:GetService("ContextActionService")
 	local RunService = Client.Services.RunService
 	local LocalPlayer = Client.Player
 	local Page = Client.Pages.Freecam
@@ -19,38 +18,19 @@ function Freecam.Init(Client)
 	-- =========================
 
 	Freecam.Enabled = false
-	Freecam.ControlPlayer = false
+	Freecam.Mode = "freecam" -- freecam | drone
 	Freecam.Speed = 60
 	Freecam.Sensitivity = 0.25
 
 	local camConn
 	local yaw = 0
 	local pitch = 0
+	local camDist = 0
+
 	local saved = {}
 
 	-- =========================
-	-- Input block
-	-- =========================
-
-	local function blockControls()
-		CAS:BindAction(
-			"FreecamBlock",
-			function() return Enum.ContextActionResult.Sink end,
-			false,
-			Enum.PlayerActions.CharacterForward,
-			Enum.PlayerActions.CharacterBackward,
-			Enum.PlayerActions.CharacterLeft,
-			Enum.PlayerActions.CharacterRight,
-			Enum.PlayerActions.CharacterJump
-		)
-	end
-
-	local function unblockControls()
-		CAS:UnbindAction("FreecamBlock")
-	end
-
-	-- =========================
-	-- Core Freecam (LOGIC UNCHANGED)
+	-- Core Freecam
 	-- =========================
 
 	local function startFreecam()
@@ -66,11 +46,13 @@ function Freecam.Init(Client)
 		saved.MouseIcon = UIS.MouseIconEnabled
 
 		Camera.CameraType = Enum.CameraType.Scriptable
-		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-		UIS.MouseIconEnabled = false
 
-		if not Freecam.ControlPlayer then
-			blockControls()
+		if Freecam.Mode == "freecam" then
+			UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+			UIS.MouseIconEnabled = false
+		else
+			UIS.MouseBehavior = Enum.MouseBehavior.Default
+			UIS.MouseIconEnabled = true
 		end
 
 		local cf = Camera.CFrame
@@ -80,13 +62,17 @@ function Freecam.Init(Client)
 
 		camConn = RunService.RenderStepped:Connect(function(dt)
 
-			local delta = UIS:GetMouseDelta()
-			yaw -= delta.X * Freecam.Sensitivity * 0.01
-			pitch -= delta.Y * Freecam.Sensitivity * 0.01
-			pitch = math.clamp(pitch, -1.5, 1.5)
+			-- mouse look
+			if Freecam.Mode == "freecam" then
+				local delta = UIS:GetMouseDelta()
+				yaw -= delta.X * Freecam.Sensitivity * 0.01
+				pitch -= delta.Y * Freecam.Sensitivity * 0.01
+				pitch = math.clamp(pitch, -1.5, 1.5)
+			end
 
 			local rot = CFrame.fromOrientation(pitch, yaw, 0)
 
+			-- movement
 			local dir = Vector3.zero
 			if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
 			if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
@@ -99,7 +85,15 @@ function Freecam.Init(Client)
 				dir = dir.Unit * Freecam.Speed * dt
 			end
 
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position + dir) * rot
+			local basePos = Camera.CFrame.Position + dir
+			local camCF = CFrame.new(basePos) * rot
+
+			-- third person offset (Freecam only)
+			if Freecam.Mode == "freecam" then
+				camCF = camCF * CFrame.new(0, 0, camDist)
+			end
+
+			Camera.CFrame = camCF
 		end)
 	end
 
@@ -108,8 +102,6 @@ function Freecam.Init(Client)
 		Freecam.Enabled = false
 
 		if camConn then camConn:Disconnect() camConn = nil end
-
-		unblockControls()
 
 		if Camera then
 			Camera.CameraType = saved.Type
@@ -120,6 +112,19 @@ function Freecam.Init(Client)
 		UIS.MouseBehavior = saved.MouseBehavior
 		UIS.MouseIconEnabled = saved.MouseIcon
 	end
+
+	-- =========================
+	-- Zoom controls (Freecam only)
+	-- =========================
+
+	UIS.InputChanged:Connect(function(input)
+		if not Freecam.Enabled then return end
+		if Freecam.Mode ~= "freecam" then return end
+
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			camDist = math.clamp(camDist - input.Position.Z * 2, -100, 0)
+		end
+	end)
 
 	-- =========================
 	-- GUI
@@ -133,7 +138,7 @@ function Freecam.Init(Client)
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusFreecamFrame"
-	frame.Size = UDim2.new(0,220,0,220)
+	frame.Size = UDim2.new(0,220,0,210)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -179,59 +184,68 @@ function Freecam.Init(Client)
 		return b
 	end
 
-	local isoBtn = makeButton("Freecam (Isolated) : OFF")
-	local controlBtn = makeButton("Freecam (Control Player) : OFF")
+	local freeBtn  = makeButton("Freecam : OFF")
+	local droneBtn = makeButton("Drone Freecam : OFF")
+
+	local speedLabel = Instance.new("TextLabel")
+	speedLabel.Size = UDim2.new(1,0,0,18)
+	speedLabel.BackgroundTransparency = 1
+	speedLabel.Text = "Speed: 60"
+	speedLabel.Font = Enum.Font.Code
+	speedLabel.TextSize = 13
+	speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+	speedLabel.TextColor3 = Theme.TEXT_DIM
+	speedLabel.Parent = holder
 
 	-- =========================
 	-- Buttons
 	-- =========================
 
-	isoBtn.MouseButton1Click:Connect(function()
-		if Freecam.Enabled and not Freecam.ControlPlayer then
+	freeBtn.MouseButton1Click:Connect(function()
+		if Freecam.Enabled and Freecam.Mode == "freecam" then
 			stopFreecam()
-			isoBtn.Text = "Freecam (Isolated) : OFF"
-			isoBtn.TextColor3 = Theme.TEXT_DIM
+			freeBtn.Text = "Freecam : OFF"
+			freeBtn.TextColor3 = Theme.TEXT_DIM
 			return
 		end
 
 		stopFreecam()
-		Freecam.ControlPlayer = false
+		Freecam.Mode = "freecam"
 		startFreecam()
 
-		isoBtn.Text = "Freecam (Isolated) : ON"
-		isoBtn.TextColor3 = Theme.TEXT
-
-		controlBtn.Text = "Freecam (Control Player) : OFF"
-		controlBtn.TextColor3 = Theme.TEXT_DIM
+		freeBtn.Text = "Freecam : ON"
+		freeBtn.TextColor3 = Theme.TEXT
+		droneBtn.Text = "Drone Freecam : OFF"
+		droneBtn.TextColor3 = Theme.TEXT_DIM
 	end)
 
-	controlBtn.MouseButton1Click:Connect(function()
-		if Freecam.Enabled and Freecam.ControlPlayer then
+	droneBtn.MouseButton1Click:Connect(function()
+		if Freecam.Enabled and Freecam.Mode == "drone" then
 			stopFreecam()
-			controlBtn.Text = "Freecam (Control Player) : OFF"
-			controlBtn.TextColor3 = Theme.TEXT_DIM
+			droneBtn.Text = "Drone Freecam : OFF"
+			droneBtn.TextColor3 = Theme.TEXT_DIM
 			return
 		end
 
 		stopFreecam()
-		Freecam.ControlPlayer = true
+		Freecam.Mode = "drone"
 		startFreecam()
 
-		controlBtn.Text = "Freecam (Control Player) : ON"
-		controlBtn.TextColor3 = Theme.TEXT
-
-		isoBtn.Text = "Freecam (Isolated) : OFF"
-		isoBtn.TextColor3 = Theme.TEXT_DIM
+		droneBtn.Text = "Drone Freecam : ON"
+		droneBtn.TextColor3 = Theme.TEXT
+		freeBtn.Text = "Freecam : OFF"
+		freeBtn.TextColor3 = Theme.TEXT_DIM
 	end)
 
+	-- safety reset
 	LocalPlayer.CharacterAdded:Connect(function()
 		if Freecam.Enabled then
 			task.wait(0.2)
 			stopFreecam()
-			isoBtn.Text = "Freecam (Isolated) : OFF"
-			controlBtn.Text = "Freecam (Control Player) : OFF"
-			isoBtn.TextColor3 = Theme.TEXT_DIM
-			controlBtn.TextColor3 = Theme.TEXT_DIM
+			freeBtn.Text = "Freecam : OFF"
+			freeBtn.TextColor3 = Theme.TEXT_DIM
+			droneBtn.Text = "Drone Freecam : OFF"
+			droneBtn.TextColor3 = Theme.TEXT_DIM
 		end
 	end)
 end
