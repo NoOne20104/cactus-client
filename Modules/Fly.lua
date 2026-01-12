@@ -12,6 +12,8 @@ function Fly.Init(Client)
 	local Page = Client.Pages.Fly
 	local Theme = Client.Theme
 
+	Page:ClearAllChildren() -- safety
+
 	-- =========================
 	-- State
 	-- =========================
@@ -60,7 +62,7 @@ function Fly.Init(Client)
 	end
 
 	-- =========================
-	-- Fly Core (UNCHANGED)
+	-- Fly Core (LOGIC UNCHANGED)
 	-- =========================
 
 	local function startFly()
@@ -94,6 +96,12 @@ function Fly.Init(Client)
 
 		moveConn = RunService.RenderStepped:Connect(function()
 			if not Fly.Enabled then return end
+
+			-- ✅ AUTO DISABLE ON GROUND (NORMAL ONLY)
+			if Fly.Mode == "normal" and humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+				Fly.Enabled = false
+				return
+			end
 
 			if Fly.Mode == "phase" then
 				local Phase = Client.Modules and Client.Modules.Phase
@@ -140,19 +148,11 @@ function Fly.Init(Client)
 	end
 
 	-- =========================
-	-- GUI (FIXED: no LayoutOrder ties + clean reload)
+	-- GUI (clean dev layout)
 	-- =========================
 
-	-- remove any old Fly UI (GUI-only, prevents "nothing changed" due to stacked frames)
-	for _,child in ipairs(Page:GetChildren()) do
-		if child:IsA("Frame") and child.Name == "CactusFlyFrame" then
-			child:Destroy()
-		end
-	end
-
 	local frame = Instance.new("Frame")
-	frame.Name = "CactusFlyFrame"
-	frame.Size = UDim2.new(0,220,0,230)
+	frame.Size = UDim2.new(0,220,0,250)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -182,7 +182,6 @@ function Fly.Init(Client)
 
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0,6)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = holder
 
 	local function makeButton(text, order)
@@ -200,16 +199,18 @@ function Fly.Init(Client)
 		return b
 	end
 
-	-- IMPORTANT: spaced orders so speedBlock can slot under without ties
-	local normalBtn = makeButton("Normal Fly : OFF", 10)
-	local phaseBtn  = makeButton("Phase Fly : OFF", 30)
+	local normalBtn  = makeButton("Normal Fly : OFF", 1)
+	local phaseBtn   = makeButton("Phase Fly : OFF", 2)
+	local disableBtn = makeButton("Disable Fly", 99)
 
-	-- speed block (movable)
+	-- =========================
+	-- Speed block
+	-- =========================
+
 	local speedBlock = Instance.new("Frame")
 	speedBlock.Size = UDim2.new(1,0,0,44)
 	speedBlock.BackgroundTransparency = 1
 	speedBlock.Visible = false
-	speedBlock.LayoutOrder = 999
 	speedBlock.Parent = nil
 
 	local speedLabel = Instance.new("TextLabel")
@@ -230,11 +231,6 @@ function Fly.Init(Client)
 	slider.Parent = speedBlock
 	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
 
-	local stroke2 = Instance.new("UIStroke", slider)
-	stroke2.Color = Theme.STROKE
-	stroke2.Transparency = 0.7
-	stroke2.Thickness = 1
-
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0.25,0,1,0)
 	fill.BackgroundColor3 = Theme.TEXT
@@ -243,12 +239,11 @@ function Fly.Init(Client)
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
 	-- =========================
-	-- Speed block control (FIXED)
+	-- Speed block control
 	-- =========================
 
 	local function showSpeedUnder(button)
 		speedBlock.Parent = holder
-		-- no ties possible now (10->11, 30->31)
 		speedBlock.LayoutOrder = button.LayoutOrder + 1
 		speedBlock.Visible = true
 	end
@@ -287,7 +282,7 @@ function Fly.Init(Client)
 	end)
 
 	-- =========================
-	-- Buttons (logic unchanged)
+	-- Buttons
 	-- =========================
 
 	normalBtn.MouseButton1Click:Connect(function()
@@ -329,9 +324,19 @@ function Fly.Init(Client)
 		phaseBtn.Text = "Phase Fly : ON"
 		phaseBtn.TextColor3 = Theme.TEXT
 	end)
+
+	disableBtn.MouseButton1Click:Connect(function()
+		stopFly()
+		hideSpeed()
+		normalBtn.Text = "Normal Fly : OFF"
+		phaseBtn.Text = "Phase Fly : OFF"
+		normalBtn.TextColor3 = Theme.TEXT_DIM
+		phaseBtn.TextColor3 = Theme.TEXT_DIM
+	end)
 end
 
 return Fly
+
 
 
 
