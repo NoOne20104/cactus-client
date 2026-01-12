@@ -140,10 +140,18 @@ function Fly.Init(Client)
 	end
 
 	-- =========================
-	-- GUI (reflow + movable speed block)
+	-- GUI (FIXED: no LayoutOrder ties + clean reload)
 	-- =========================
 
+	-- remove any old Fly UI (GUI-only, prevents "nothing changed" due to stacked frames)
+	for _,child in ipairs(Page:GetChildren()) do
+		if child:IsA("Frame") and child.Name == "CactusFlyFrame" then
+			child:Destroy()
+		end
+	end
+
 	local frame = Instance.new("Frame")
+	frame.Name = "CactusFlyFrame"
 	frame.Size = UDim2.new(0,220,0,230)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
@@ -174,6 +182,7 @@ function Fly.Init(Client)
 
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0,6)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = holder
 
 	local function makeButton(text, order)
@@ -191,15 +200,16 @@ function Fly.Init(Client)
 		return b
 	end
 
-	local normalBtn = makeButton("Normal Fly : OFF", 1)
-	local phaseBtn  = makeButton("Phase Fly : OFF", 2)
+	-- IMPORTANT: spaced orders so speedBlock can slot under without ties
+	local normalBtn = makeButton("Normal Fly : OFF", 10)
+	local phaseBtn  = makeButton("Phase Fly : OFF", 30)
 
 	-- speed block (movable)
 	local speedBlock = Instance.new("Frame")
 	speedBlock.Size = UDim2.new(1,0,0,44)
 	speedBlock.BackgroundTransparency = 1
 	speedBlock.Visible = false
-	speedBlock.LayoutOrder = 99
+	speedBlock.LayoutOrder = 999
 	speedBlock.Parent = nil
 
 	local speedLabel = Instance.new("TextLabel")
@@ -233,11 +243,12 @@ function Fly.Init(Client)
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
 	-- =========================
-	-- Speed block control
+	-- Speed block control (FIXED)
 	-- =========================
 
 	local function showSpeedUnder(button)
 		speedBlock.Parent = holder
+		-- no ties possible now (10->11, 30->31)
 		speedBlock.LayoutOrder = button.LayoutOrder + 1
 		speedBlock.Visible = true
 	end
