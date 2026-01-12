@@ -152,7 +152,7 @@ function Fly.Init(Client)
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusFlyFrame"
-	frame.Size = UDim2.new(0,220,0,195)
+	frame.Size = UDim2.new(0,220,0,200)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -345,3 +345,4 @@ function Fly.Init(Client)
 end
 
 return Fly
+
