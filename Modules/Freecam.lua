@@ -7,6 +7,7 @@ function Freecam.Init(Client)
 	-- =========================
 
 	local UIS = game:GetService("UserInputService")
+	local CAS = game:GetService("ContextActionService")
 	local RunService = Client.Services.RunService
 	local LocalPlayer = Client.Player
 	local Page = Client.Pages.Freecam
@@ -28,6 +29,26 @@ function Freecam.Init(Client)
 	local saved = {}
 
 	-- =========================
+	-- Input blocking (NEW, fixes player moving)
+	-- =========================
+
+	local function blockControls()
+		CAS:BindAction("CactusFreecamBlock", function()
+			return Enum.ContextActionResult.Sink
+		end, false,
+			Enum.PlayerActions.CharacterForward,
+			Enum.PlayerActions.CharacterBackward,
+			Enum.PlayerActions.CharacterLeft,
+			Enum.PlayerActions.CharacterRight,
+			Enum.PlayerActions.CharacterJump
+		)
+	end
+
+	local function unblockControls()
+		CAS:UnbindAction("CactusFreecamBlock")
+	end
+
+	-- =========================
 	-- Core Freecam
 	-- =========================
 
@@ -45,8 +66,12 @@ function Freecam.Init(Client)
 		saved.MouseIcon = UIS.MouseIconEnabled
 
 		Camera.CameraType = Enum.CameraType.Scriptable
-		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+		-- 🔧 FIX: not hard FPS, just hide cursor
+		UIS.MouseBehavior = Enum.MouseBehavior.Default
 		UIS.MouseIconEnabled = false
+
+		blockControls()
 
 		local cf = Camera.CFrame
 		local look = cf.LookVector
@@ -86,6 +111,8 @@ function Freecam.Init(Client)
 
 		if camConn then camConn:Disconnect() camConn = nil end
 
+		unblockControls()
+
 		if Camera then
 			Camera.CameraType = saved.Type
 			Camera.CameraSubject = saved.Subject
@@ -97,7 +124,7 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- GUI
+	-- GUI (unchanged)
 	-- =========================
 
 	for _,child in ipairs(Page:GetChildren()) do
@@ -185,9 +212,7 @@ function Freecam.Init(Client)
 	fill.Parent = slider
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
-	-- =========================
-	-- Slider logic
-	-- =========================
+	-- slider logic unchanged
 
 	local dragging = false
 
@@ -213,10 +238,6 @@ function Freecam.Init(Client)
 		fill.Size = UDim2.new(rel,0,1,0)
 	end)
 
-	-- =========================
-	-- Button
-	-- =========================
-
 	toggleBtn.MouseButton1Click:Connect(function()
 		if Freecam.Enabled then
 			stopFreecam()
@@ -229,7 +250,6 @@ function Freecam.Init(Client)
 		end
 	end)
 
-	-- safety: respawn reset
 	LocalPlayer.CharacterAdded:Connect(function()
 		if Freecam.Enabled then
 			task.wait(0.2)
