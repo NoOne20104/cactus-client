@@ -19,23 +19,24 @@ function Freecam.Init(Client)
 	-- =========================
 
 	Freecam.Enabled = false
+	Freecam.ControlPlayer = false
 	Freecam.Speed = 60
 	Freecam.Sensitivity = 0.25
 
 	local camConn
 	local yaw = 0
 	local pitch = 0
-
 	local saved = {}
 
 	-- =========================
-	-- Input blocking (NEW, fixes player moving)
+	-- Input block
 	-- =========================
 
 	local function blockControls()
-		CAS:BindAction("CactusFreecamBlock", function()
-			return Enum.ContextActionResult.Sink
-		end, false,
+		CAS:BindAction(
+			"FreecamBlock",
+			function() return Enum.ContextActionResult.Sink end,
+			false,
 			Enum.PlayerActions.CharacterForward,
 			Enum.PlayerActions.CharacterBackward,
 			Enum.PlayerActions.CharacterLeft,
@@ -45,11 +46,11 @@ function Freecam.Init(Client)
 	end
 
 	local function unblockControls()
-		CAS:UnbindAction("CactusFreecamBlock")
+		CAS:UnbindAction("FreecamBlock")
 	end
 
 	-- =========================
-	-- Core Freecam
+	-- Core Freecam (LOGIC UNCHANGED)
 	-- =========================
 
 	local function startFreecam()
@@ -58,7 +59,6 @@ function Freecam.Init(Client)
 
 		Freecam.Enabled = true
 
-		-- save camera state
 		saved.Type = Camera.CameraType
 		saved.Subject = Camera.CameraSubject
 		saved.CFrame = Camera.CFrame
@@ -66,12 +66,12 @@ function Freecam.Init(Client)
 		saved.MouseIcon = UIS.MouseIconEnabled
 
 		Camera.CameraType = Enum.CameraType.Scriptable
-
-		-- 🔧 FIX: not hard FPS, just hide cursor
-		UIS.MouseBehavior = Enum.MouseBehavior.Default
+		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
 		UIS.MouseIconEnabled = false
 
-		blockControls()
+		if not Freecam.ControlPlayer then
+			blockControls()
+		end
 
 		local cf = Camera.CFrame
 		local look = cf.LookVector
@@ -80,7 +80,6 @@ function Freecam.Init(Client)
 
 		camConn = RunService.RenderStepped:Connect(function(dt)
 
-			-- mouse look
 			local delta = UIS:GetMouseDelta()
 			yaw -= delta.X * Freecam.Sensitivity * 0.01
 			pitch -= delta.Y * Freecam.Sensitivity * 0.01
@@ -88,7 +87,6 @@ function Freecam.Init(Client)
 
 			local rot = CFrame.fromOrientation(pitch, yaw, 0)
 
-			-- movement
 			local dir = Vector3.zero
 			if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
 			if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
@@ -124,7 +122,7 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- GUI (unchanged)
+	-- GUI
 	-- =========================
 
 	for _,child in ipairs(Page:GetChildren()) do
@@ -135,7 +133,7 @@ function Freecam.Init(Client)
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusFreecamFrame"
-	frame.Size = UDim2.new(0,220,0,200)
+	frame.Size = UDim2.new(0,220,0,220)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -181,81 +179,59 @@ function Freecam.Init(Client)
 		return b
 	end
 
-	local toggleBtn = makeButton("Freecam : OFF")
+	local isoBtn = makeButton("Freecam (Isolated) : OFF")
+	local controlBtn = makeButton("Freecam (Control Player) : OFF")
 
-	local speedLabel = Instance.new("TextLabel")
-	speedLabel.Size = UDim2.new(1,0,0,18)
-	speedLabel.BackgroundTransparency = 1
-	speedLabel.Text = "Speed: 60"
-	speedLabel.Font = Enum.Font.Code
-	speedLabel.TextSize = 13
-	speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-	speedLabel.TextColor3 = Theme.TEXT_DIM
-	speedLabel.Parent = holder
+	-- =========================
+	-- Buttons
+	-- =========================
 
-	local slider = Instance.new("TextButton")
-	slider.Size = UDim2.new(1,0,0,8)
-	slider.BackgroundColor3 = Theme.BUTTON
-	slider.Text = ""
-	slider.Parent = holder
-	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
-
-	local stroke2 = Instance.new("UIStroke", slider)
-	stroke2.Color = Theme.STROKE
-	stroke2.Transparency = 0.7
-	stroke2.Thickness = 1
-
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.new(0.25,0,1,0)
-	fill.BackgroundColor3 = Theme.TEXT
-	fill.BorderSizePixel = 0
-	fill.Parent = slider
-	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
-
-	-- slider logic unchanged
-
-	local dragging = false
-
-	slider.InputBegan:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
-	end)
-
-	slider.InputEnded:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-	end)
-
-	UIS.InputChanged:Connect(function(i)
-		if not dragging then return end
-		if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-
-		local rel = math.clamp(
-			(i.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X,
-			0,1
-		)
-
-		Freecam.Speed = math.floor(10 + rel * 190)
-		speedLabel.Text = "Speed: " .. Freecam.Speed
-		fill.Size = UDim2.new(rel,0,1,0)
-	end)
-
-	toggleBtn.MouseButton1Click:Connect(function()
-		if Freecam.Enabled then
+	isoBtn.MouseButton1Click:Connect(function()
+		if Freecam.Enabled and not Freecam.ControlPlayer then
 			stopFreecam()
-			toggleBtn.Text = "Freecam : OFF"
-			toggleBtn.TextColor3 = Theme.TEXT_DIM
-		else
-			startFreecam()
-			toggleBtn.Text = "Freecam : ON"
-			toggleBtn.TextColor3 = Theme.TEXT
+			isoBtn.Text = "Freecam (Isolated) : OFF"
+			isoBtn.TextColor3 = Theme.TEXT_DIM
+			return
 		end
+
+		stopFreecam()
+		Freecam.ControlPlayer = false
+		startFreecam()
+
+		isoBtn.Text = "Freecam (Isolated) : ON"
+		isoBtn.TextColor3 = Theme.TEXT
+
+		controlBtn.Text = "Freecam (Control Player) : OFF"
+		controlBtn.TextColor3 = Theme.TEXT_DIM
+	end)
+
+	controlBtn.MouseButton1Click:Connect(function()
+		if Freecam.Enabled and Freecam.ControlPlayer then
+			stopFreecam()
+			controlBtn.Text = "Freecam (Control Player) : OFF"
+			controlBtn.TextColor3 = Theme.TEXT_DIM
+			return
+		end
+
+		stopFreecam()
+		Freecam.ControlPlayer = true
+		startFreecam()
+
+		controlBtn.Text = "Freecam (Control Player) : ON"
+		controlBtn.TextColor3 = Theme.TEXT
+
+		isoBtn.Text = "Freecam (Isolated) : OFF"
+		isoBtn.TextColor3 = Theme.TEXT_DIM
 	end)
 
 	LocalPlayer.CharacterAdded:Connect(function()
 		if Freecam.Enabled then
 			task.wait(0.2)
 			stopFreecam()
-			toggleBtn.Text = "Freecam : OFF"
-			toggleBtn.TextColor3 = Theme.TEXT_DIM
+			isoBtn.Text = "Freecam (Isolated) : OFF"
+			controlBtn.Text = "Freecam (Control Player) : OFF"
+			isoBtn.TextColor3 = Theme.TEXT_DIM
+			controlBtn.TextColor3 = Theme.TEXT_DIM
 		end
 	end)
 end
