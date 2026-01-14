@@ -20,9 +20,14 @@ function Freecam.Init(Client)
 	-- =========================
 
 	Freecam.Enabled = false
+
 	local saved = {}
 	local humanoid
 	local root
+	local camConn
+
+	local yaw = 0
+	local pitch = 0
 
 	-- =========================
 	-- Character
@@ -36,7 +41,7 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- Core Freecam (NO movement yet)
+	-- Core Freecam
 	-- =========================
 
 	local function startFreecam()
@@ -65,13 +70,32 @@ function Freecam.Init(Client)
 		humanoid.JumpPower = 0
 		humanoid.AutoRotate = false
 
-		-- set camera
+		-- camera mode
 		Camera.CameraType = Enum.CameraType.Scriptable
 		UIS.MouseBehavior = Enum.MouseBehavior.Default
 		UIS.MouseIconEnabled = true
 
-		-- place camera in third person
-		Camera.CFrame = root.CFrame * CFrame.new(0, 2, 10)
+		-- starting camera position (3rd person)
+		local startCF = root.CFrame * CFrame.new(0, 2, 10)
+		Camera.CFrame = startCF
+
+		local look = startCF.LookVector
+		yaw = math.atan2(-look.X, -look.Z)
+		pitch = math.asin(look.Y)
+
+		-- camera control loop
+		camConn = RunService.RenderStepped:Connect(function()
+
+			if not Freecam.Enabled then return end
+
+			local delta = UIS:GetMouseDelta()
+			yaw -= delta.X * 0.002
+			pitch -= delta.Y * 0.002
+			pitch = math.clamp(pitch, -1.45, 1.45)
+
+			local rot = CFrame.fromOrientation(pitch, yaw, 0)
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position) * rot
+		end)
 
 		print("[Freecam] Enabled")
 	end
@@ -79,6 +103,8 @@ function Freecam.Init(Client)
 	local function stopFreecam()
 		if not Freecam.Enabled then return end
 		Freecam.Enabled = false
+
+		if camConn then camConn:Disconnect() camConn = nil end
 
 		-- restore camera
 		if Camera then
@@ -175,4 +201,5 @@ function Freecam.Init(Client)
 end
 
 return Freecam
+
 
