@@ -21,9 +21,9 @@ function Freecam.Init(Client)
 	Freecam.Speed = 60
 	Freecam.Sensitivity = 0.25
 
-	local camConn
 	local yaw = 0
 	local pitch = 0
+	local looking = false
 
 	local saved = {}
 
@@ -77,7 +77,6 @@ function Freecam.Init(Client)
 
 		Freecam.Enabled = true
 
-		-- save camera state
 		saved.Type = Camera.CameraType
 		saved.Subject = Camera.CameraSubject
 		saved.CFrame = Camera.CFrame
@@ -87,23 +86,25 @@ function Freecam.Init(Client)
 		freezeCharacter()
 
 		Camera.CameraType = Enum.CameraType.Scriptable
-		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-		UIS.MouseIconEnabled = false
+		UIS.MouseBehavior = Enum.MouseBehavior.Default
+		UIS.MouseIconEnabled = true
 
 		local look = Camera.CFrame.LookVector
 		yaw = math.atan2(-look.X, -look.Z)
 		pitch = math.asin(look.Y)
 
-		camConn = RunService:BindToRenderStep(
+		RunService:BindToRenderStep(
 			"CactusFreecam",
 			Enum.RenderPriority.Camera.Value,
 			function(dt)
 
-				-- mouse look
-				local delta = UIS:GetMouseDelta()
-				yaw -= delta.X * Freecam.Sensitivity * 0.01
-				pitch -= delta.Y * Freecam.Sensitivity * 0.01
-				pitch = math.clamp(pitch, -1.5, 1.5)
+				-- mouse look (only when holding right click)
+				if looking then
+					local delta = UIS:GetMouseDelta()
+					yaw -= delta.X * Freecam.Sensitivity * 0.01
+					pitch -= delta.Y * Freecam.Sensitivity * 0.01
+					pitch = math.clamp(pitch, -1.5, 1.5)
+				end
 
 				local rot = CFrame.fromOrientation(pitch, yaw, 0)
 
@@ -142,6 +143,29 @@ function Freecam.Init(Client)
 		UIS.MouseBehavior = saved.MouseBehavior
 		UIS.MouseIconEnabled = saved.MouseIcon
 	end
+
+	-- =========================
+	-- Right click control
+	-- =========================
+
+	UIS.InputBegan:Connect(function(input, gp)
+		if not Freecam.Enabled then return end
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			looking = true
+			UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+			UIS.MouseIconEnabled = false
+		end
+	end)
+
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			looking = false
+			if Freecam.Enabled then
+				UIS.MouseBehavior = Enum.MouseBehavior.Default
+				UIS.MouseIconEnabled = true
+			end
+		end
+	end)
 
 	-- =========================
 	-- GUI
@@ -233,7 +257,7 @@ function Freecam.Init(Client)
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
 	-- =========================
-	-- Slider logic
+	-- Slider
 	-- =========================
 
 	local dragging = false
@@ -276,7 +300,6 @@ function Freecam.Init(Client)
 		end
 	end)
 
-	-- safety: respawn reset
 	LocalPlayer.CharacterAdded:Connect(function()
 		if Freecam.Enabled then
 			task.wait(0.2)
@@ -288,5 +311,3 @@ function Freecam.Init(Client)
 end
 
 return Freecam
-
-
