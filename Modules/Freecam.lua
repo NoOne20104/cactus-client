@@ -3,126 +3,159 @@ local Freecam = {}
 function Freecam.Init(Client)
 
 	-- =========================
-	-- Services
+	-- Services / Core
 	-- =========================
 
 	local UIS = game:GetService("UserInputService")
-	local RunService = game:GetService("RunService")
-	local Players = game:GetService("Players")
-
-	local LocalPlayer = Players.LocalPlayer
-	local Camera = workspace.CurrentCamera
+	local RunService = Client.Services.RunService
+	local LocalPlayer = Client.Player
 	local Page = Client.Pages.Freecam
 	local Theme = Client.Theme
+	local Camera = workspace.CurrentCamera
 
 	-- =========================
 	-- State
 	-- =========================
 
-	local enabled = false
+	Freecam.Enabled = false
+	Freecam.Speed = 60
+	Freecam.Sensitivity = 0.25
+
 	local camConn
-
-	local humanoid
-	local root
-
 	local yaw = 0
 	local pitch = 0
 
 	local saved = {}
 
 	-- =========================
-	-- Character
+	-- Character freeze
 	-- =========================
 
-	local function getCharacter()
-		local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-		humanoid = char:WaitForChild("Humanoid")
-		root = char:WaitForChild("HumanoidRootPart")
+	local function freezeCharacter()
+		local char = LocalPlayer.Character
+		if not char then return end
+
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		local root = char:FindFirstChild("HumanoidRootPart")
+
+		if hum then
+			saved.WalkSpeed = hum.WalkSpeed
+			saved.JumpPower = hum.JumpPower
+			hum.WalkSpeed = 0
+			hum.JumpPower = 0
+		end
+
+		if root then
+			root.Anchored = true
+		end
+	end
+
+	local function unfreezeCharacter()
+		local char = LocalPlayer.Character
+		if not char then return end
+
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		local root = char:FindFirstChild("HumanoidRootPart")
+
+		if hum then
+			hum.WalkSpeed = saved.WalkSpeed or 16
+			hum.JumpPower = saved.JumpPower or 50
+		end
+
+		if root then
+			root.Anchored = false
+		end
 	end
 
 	-- =========================
-	-- Freecam Core
+	-- Core Freecam
 	-- =========================
 
-	local function enableFreecam()
-		if enabled then return end
-		enabled = true
+	local function startFreecam()
+		if Freecam.Enabled then return end
+		if not Camera then return end
 
-		getCharacter()
+		Freecam.Enabled = true
 
-		-- save camera
-		saved.CameraType = Camera.CameraType
-		saved.CameraSubject = Camera.CameraSubject
-		saved.CameraCFrame = Camera.CFrame
+		-- save camera state
+		saved.Type = Camera.CameraType
+		saved.Subject = Camera.CameraSubject
+		saved.CFrame = Camera.CFrame
+		saved.MouseBehavior = UIS.MouseBehavior
+		saved.MouseIcon = UIS.MouseIconEnabled
 
-		-- save humanoid
-		saved.WalkSpeed = humanoid.WalkSpeed
-		saved.JumpPower = humanoid.JumpPower
-		saved.AutoRotate = humanoid.AutoRotate
+		freezeCharacter()
 
-		-- freeze player
-		humanoid.WalkSpeed = 0
-		humanoid.JumpPower = 0
-		humanoid.AutoRotate = false
-
-		-- camera setup
 		Camera.CameraType = Enum.CameraType.Scriptable
+		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+		UIS.MouseIconEnabled = false
 
-		-- start behind player
-		local startCF = root.CFrame * CFrame.new(0, 2, 10)
-		Camera.CFrame = startCF
-
-		local look = startCF.LookVector
+		local look = Camera.CFrame.LookVector
 		yaw = math.atan2(-look.X, -look.Z)
 		pitch = math.asin(look.Y)
 
-		camConn = RunService.RenderStepped:Connect(function()
-			local delta = UIS:GetMouseDelta()
+		camConn = RunService:BindToRenderStep(
+			"CactusFreecam",
+			Enum.RenderPriority.Camera.Value,
+			function(dt)
 
-			yaw -= delta.X * 0.002
-			pitch -= delta.Y * 0.002
-			pitch = math.clamp(pitch, -1.4, 1.4)
+				-- mouse look
+				local delta = UIS:GetMouseDelta()
+				yaw -= delta.X * Freecam.Sensitivity * 0.01
+				pitch -= delta.Y * Freecam.Sensitivity * 0.01
+				pitch = math.clamp(pitch, -1.5, 1.5)
 
-			local rot = CFrame.fromOrientation(pitch, yaw, 0)
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position) * rot
-		end)
+				local rot = CFrame.fromOrientation(pitch, yaw, 0)
+
+				-- movement
+				local dir = Vector3.zero
+				if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
+				if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
+				if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= rot.RightVector end
+				if UIS:IsKeyDown(Enum.KeyCode.D) then dir += rot.RightVector end
+				if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
+				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
+
+				if dir.Magnitude > 0 then
+					dir = dir.Unit * Freecam.Speed * dt
+				end
+
+				Camera.CFrame = CFrame.new(Camera.CFrame.Position + dir) * rot
+			end
+		)
 	end
 
-	local function disableFreecam()
-		if not enabled then return end
-		enabled = false
+	local function stopFreecam()
+		if not Freecam.Enabled then return end
+		Freecam.Enabled = false
 
-		if camConn then
-			camConn:Disconnect()
-			camConn = nil
+		RunService:UnbindFromRenderStep("CactusFreecam")
+
+		unfreezeCharacter()
+
+		if Camera then
+			Camera.CameraType = saved.Type
+			Camera.CameraSubject = saved.Subject
+			Camera.CFrame = saved.CFrame
 		end
 
-		-- restore camera
-		Camera.CameraType = saved.CameraType
-		Camera.CameraSubject = saved.CameraSubject
-		Camera.CFrame = saved.CameraCFrame
-
-		-- restore player
-		if humanoid then
-			humanoid.WalkSpeed = saved.WalkSpeed
-			humanoid.JumpPower = saved.JumpPower
-			humanoid.AutoRotate = saved.AutoRotate
-		end
+		UIS.MouseBehavior = saved.MouseBehavior
+		UIS.MouseIconEnabled = saved.MouseIcon
 	end
 
 	-- =========================
 	-- GUI
 	-- =========================
 
-	for _,v in ipairs(Page:GetChildren()) do
-		if v:IsA("Frame") and v.Name == "CactusFreecamFrame" then
-			v:Destroy()
+	for _,child in ipairs(Page:GetChildren()) do
+		if child:IsA("Frame") and child.Name == "CactusFreecamFrame" then
+			child:Destroy()
 		end
 	end
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusFreecamFrame"
-	frame.Size = UDim2.new(0,220,0,110)
+	frame.Size = UDim2.new(0,220,0,200)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -144,40 +177,116 @@ function Freecam.Init(Client)
 	title.TextColor3 = Theme.TEXT
 	title.Parent = frame
 
-	local toggle = Instance.new("TextButton")
-	toggle.Size = UDim2.new(1,-20,0,30)
-	toggle.Position = UDim2.new(0,10,0,44)
-	toggle.BackgroundColor3 = Theme.BUTTON
-	toggle.Text = "Freecam : OFF"
-	toggle.Font = Enum.Font.Code
-	toggle.TextSize = 14
-	toggle.TextColor3 = Theme.TEXT_DIM
-	toggle.BorderSizePixel = 0
-	toggle.Parent = frame
-	Instance.new("UICorner", toggle).CornerRadius = UDim.new(0,6)
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(1,-20,1,-40)
+	holder.Position = UDim2.new(0,10,0,36)
+	holder.BackgroundTransparency = 1
+	holder.Parent = frame
 
-	toggle.MouseButton1Click:Connect(function()
-		if enabled then
-			disableFreecam()
-			toggle.Text = "Freecam : OFF"
-			toggle.TextColor3 = Theme.TEXT_DIM
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0,6)
+	layout.Parent = holder
+
+	local function makeButton(text)
+		local b = Instance.new("TextButton")
+		b.Size = UDim2.new(1,0,0,30)
+		b.BackgroundColor3 = Theme.BUTTON
+		b.Text = text
+		b.Font = Enum.Font.Code
+		b.TextSize = 14
+		b.TextColor3 = Theme.TEXT_DIM
+		b.BorderSizePixel = 0
+		b.Parent = holder
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+		return b
+	end
+
+	local toggleBtn = makeButton("Freecam : OFF")
+
+	local speedLabel = Instance.new("TextLabel")
+	speedLabel.Size = UDim2.new(1,0,0,18)
+	speedLabel.BackgroundTransparency = 1
+	speedLabel.Text = "Speed: 60"
+	speedLabel.Font = Enum.Font.Code
+	speedLabel.TextSize = 13
+	speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+	speedLabel.TextColor3 = Theme.TEXT_DIM
+	speedLabel.Parent = holder
+
+	local slider = Instance.new("TextButton")
+	slider.Size = UDim2.new(1,0,0,8)
+	slider.BackgroundColor3 = Theme.BUTTON
+	slider.Text = ""
+	slider.Parent = holder
+	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
+
+	local stroke2 = Instance.new("UIStroke", slider)
+	stroke2.Color = Theme.STROKE
+	stroke2.Transparency = 0.7
+	stroke2.Thickness = 1
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new(0.25,0,1,0)
+	fill.BackgroundColor3 = Theme.TEXT
+	fill.BorderSizePixel = 0
+	fill.Parent = slider
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
+
+	-- =========================
+	-- Slider logic
+	-- =========================
+
+	local dragging = false
+
+	slider.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+	end)
+
+	slider.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+	end)
+
+	UIS.InputChanged:Connect(function(i)
+		if not dragging then return end
+		if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+
+		local rel = math.clamp(
+			(i.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X,
+			0,1
+		)
+
+		Freecam.Speed = math.floor(10 + rel * 190)
+		speedLabel.Text = "Speed: " .. Freecam.Speed
+		fill.Size = UDim2.new(rel,0,1,0)
+	end)
+
+	-- =========================
+	-- Button
+	-- =========================
+
+	toggleBtn.MouseButton1Click:Connect(function()
+		if Freecam.Enabled then
+			stopFreecam()
+			toggleBtn.Text = "Freecam : OFF"
+			toggleBtn.TextColor3 = Theme.TEXT_DIM
 		else
-			enableFreecam()
-			toggle.Text = "Freecam : ON"
-			toggle.TextColor3 = Theme.TEXT
+			startFreecam()
+			toggleBtn.Text = "Freecam : ON"
+			toggleBtn.TextColor3 = Theme.TEXT
 		end
 	end)
 
-	-- safety
+	-- safety: respawn reset
 	LocalPlayer.CharacterAdded:Connect(function()
-		task.wait()
-		if enabled then
-			disableFreecam()
-			toggle.Text = "Freecam : OFF"
-			toggle.TextColor3 = Theme.TEXT_DIM
+		if Freecam.Enabled then
+			task.wait(0.2)
+			stopFreecam()
+			toggleBtn.Text = "Freecam : OFF"
+			toggleBtn.TextColor3 = Theme.TEXT_DIM
 		end
 	end)
 end
 
 return Freecam
+
 
