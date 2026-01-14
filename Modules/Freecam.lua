@@ -201,5 +201,3 @@ function Freecam.Init(Client)
 end
 
 return Freecam
-
-
