@@ -7,7 +7,7 @@ function Freecam.Init(Client)
 	-- =========================
 
 	local UIS = game:GetService("UserInputService")
-	local RunService = Client.Services.RunService
+	local RunService = game:GetService("RunService")
 	local LocalPlayer = Client.Player
 	local Page = Client.Pages.Freecam
 	local Theme = Client.Theme
@@ -68,7 +68,7 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- Core Freecam
+	-- Core Freecam (UNCHANGED)
 	-- =========================
 
 	local function startFreecam()
@@ -93,37 +93,31 @@ function Freecam.Init(Client)
 		yaw = math.atan2(-look.X, -look.Z)
 		pitch = math.asin(look.Y)
 
-		RunService:BindToRenderStep(
-			"CactusFreecam",
-			Enum.RenderPriority.Camera.Value,
-			function(dt)
+		RunService:BindToRenderStep("CactusFreecam", Enum.RenderPriority.Camera.Value, function(dt)
 
-				-- mouse look (only when holding right click)
-				if looking then
-					local delta = UIS:GetMouseDelta()
-					yaw -= delta.X * Freecam.Sensitivity * 0.01
-					pitch -= delta.Y * Freecam.Sensitivity * 0.01
-					pitch = math.clamp(pitch, -1.5, 1.5)
-				end
-
-				local rot = CFrame.fromOrientation(pitch, yaw, 0)
-
-				-- movement
-				local dir = Vector3.zero
-				if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
-				if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
-				if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= rot.RightVector end
-				if UIS:IsKeyDown(Enum.KeyCode.D) then dir += rot.RightVector end
-				if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
-				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
-
-				if dir.Magnitude > 0 then
-					dir = dir.Unit * Freecam.Speed * dt
-				end
-
-				Camera.CFrame = CFrame.new(Camera.CFrame.Position + dir) * rot
+			if looking then
+				local delta = UIS:GetMouseDelta()
+				yaw -= delta.X * Freecam.Sensitivity * 0.01
+				pitch -= delta.Y * Freecam.Sensitivity * 0.01
+				pitch = math.clamp(pitch, -1.5, 1.5)
 			end
-		)
+
+			local rot = CFrame.fromOrientation(pitch, yaw, 0)
+
+			local dir = Vector3.zero
+			if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= rot.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then dir += rot.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
+
+			if dir.Magnitude > 0 then
+				dir = dir.Unit * Freecam.Speed * dt
+			end
+
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position + dir) * rot
+		end)
 	end
 
 	local function stopFreecam()
@@ -131,7 +125,6 @@ function Freecam.Init(Client)
 		Freecam.Enabled = false
 
 		RunService:UnbindFromRenderStep("CactusFreecam")
-
 		unfreezeCharacter()
 
 		if Camera then
@@ -145,10 +138,10 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- Right click control
+	-- Right click look
 	-- =========================
 
-	UIS.InputBegan:Connect(function(input, gp)
+	UIS.InputBegan:Connect(function(input)
 		if not Freecam.Enabled then return end
 		if input.UserInputType == Enum.UserInputType.MouseButton2 then
 			looking = true
@@ -208,7 +201,7 @@ function Freecam.Init(Client)
 	holder.Parent = frame
 
 	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0,6)
+	layout.Padding = UDim.new(0,10) -- lower spacing
 	layout.Parent = holder
 
 	local function makeButton(text)
@@ -227,6 +220,13 @@ function Freecam.Init(Client)
 
 	local toggleBtn = makeButton("Freecam : OFF")
 
+	-- speed block (hidden until enabled)
+	local speedBlock = Instance.new("Frame")
+	speedBlock.Size = UDim2.new(1,0,0,46)
+	speedBlock.BackgroundTransparency = 1
+	speedBlock.Visible = false
+	speedBlock.Parent = holder
+
 	local speedLabel = Instance.new("TextLabel")
 	speedLabel.Size = UDim2.new(1,0,0,18)
 	speedLabel.BackgroundTransparency = 1
@@ -235,13 +235,14 @@ function Freecam.Init(Client)
 	speedLabel.TextSize = 13
 	speedLabel.TextXAlignment = Enum.TextXAlignment.Left
 	speedLabel.TextColor3 = Theme.TEXT_DIM
-	speedLabel.Parent = holder
+	speedLabel.Parent = speedBlock
 
 	local slider = Instance.new("TextButton")
 	slider.Size = UDim2.new(1,0,0,8)
+	slider.Position = UDim2.new(0,0,0,26) -- slightly lower
 	slider.BackgroundColor3 = Theme.BUTTON
 	slider.Text = ""
-	slider.Parent = holder
+	slider.Parent = speedBlock
 	Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
 
 	local stroke2 = Instance.new("UIStroke", slider)
@@ -250,14 +251,14 @@ function Freecam.Init(Client)
 	stroke2.Thickness = 1
 
 	local fill = Instance.new("Frame")
-	fill.Size = UDim2.new(0.25,0,1,0)
+	fill.Size = UDim2.new(0.2,0,1,0)
 	fill.BackgroundColor3 = Theme.TEXT
 	fill.BorderSizePixel = 0
 	fill.Parent = slider
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
 	-- =========================
-	-- Slider
+	-- Slider logic (UPDATED RANGE)
 	-- =========================
 
 	local dragging = false
@@ -279,7 +280,7 @@ function Freecam.Init(Client)
 			0,1
 		)
 
-		Freecam.Speed = math.floor(10 + rel * 190)
+		Freecam.Speed = math.floor(5 + rel * 295) -- 5 → 300
 		speedLabel.Text = "Speed: " .. Freecam.Speed
 		fill.Size = UDim2.new(rel,0,1,0)
 	end)
@@ -291,10 +292,12 @@ function Freecam.Init(Client)
 	toggleBtn.MouseButton1Click:Connect(function()
 		if Freecam.Enabled then
 			stopFreecam()
+			speedBlock.Visible = false
 			toggleBtn.Text = "Freecam : OFF"
 			toggleBtn.TextColor3 = Theme.TEXT_DIM
 		else
 			startFreecam()
+			speedBlock.Visible = true
 			toggleBtn.Text = "Freecam : ON"
 			toggleBtn.TextColor3 = Theme.TEXT
 		end
@@ -304,6 +307,7 @@ function Freecam.Init(Client)
 		if Freecam.Enabled then
 			task.wait(0.2)
 			stopFreecam()
+			speedBlock.Visible = false
 			toggleBtn.Text = "Freecam : OFF"
 			toggleBtn.TextColor3 = Theme.TEXT_DIM
 		end
