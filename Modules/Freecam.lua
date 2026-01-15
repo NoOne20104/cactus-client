@@ -163,7 +163,7 @@ function Freecam.Init(Client)
 	title.Size = UDim2.new(1,-12,0,26)
 	title.Position = UDim2.new(0,10,0,4)
 	title.BackgroundTransparency = 1
-	title.Text = "Drone Freecam"
+	title.Text = "Freecam"
 	title.Font = Enum.Font.Code
 	title.TextSize = 16
 	title.TextXAlignment = Enum.TextXAlignment.Left
