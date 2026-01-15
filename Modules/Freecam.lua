@@ -172,7 +172,7 @@ function Freecam.Init(Client)
 
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1,-20,1,-44)
-	holder.Position = UDim2.new(0,10,0,32) -- ⬆ moved up slightly
+	holder.Position = UDim2.new(0,10,0,26)
 	holder.BackgroundTransparency = 1
 	holder.Parent = frame
 
