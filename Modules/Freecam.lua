@@ -18,7 +18,7 @@ function Freecam.Init(Client)
 	-- =========================
 
 	Freecam.Enabled = false
-	Freecam.Mode = "drone" -- "drone" | "freecam"
+	Freecam.Mode = "drone" -- "drone" or "freecam"
 	Freecam.Speed = 60
 	Freecam.Sensitivity = 0.25
 
@@ -91,15 +91,14 @@ function Freecam.Init(Client)
 		UIS.MouseBehavior = Enum.MouseBehavior.Default
 		UIS.MouseIconEnabled = true
 
-		local look = Camera.CFrame.LookVector
+		local cf = Camera.CFrame
+		local look = cf.LookVector
 		yaw = math.atan2(-look.X, -look.Z)
 		pitch = math.asin(look.Y)
-
-		camPos = Camera.CFrame.Position
+		camPos = cf.Position
 
 		RunService:BindToRenderStep("CactusFreecam", Enum.RenderPriority.Camera.Value, function(dt)
 
-			-- mouse look
 			if looking then
 				local delta = UIS:GetMouseDelta()
 				yaw -= delta.X * Freecam.Sensitivity * 0.01
@@ -109,7 +108,6 @@ function Freecam.Init(Client)
 
 			local rot = CFrame.fromOrientation(pitch, yaw, 0)
 
-			-- movement
 			local dir = Vector3.zero
 			if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
 			if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
@@ -124,29 +122,24 @@ function Freecam.Init(Client)
 
 			camPos = camPos + dir
 
-local rotCF = CFrame.fromOrientation(pitch, yaw, 0)
-local focusPoint = camPos
+			-- =========================
+			-- CAMERA BUILD (FIXED)
+			-- =========================
 
-if Freecam.Mode == "freecam" then
-	-- ✅ REAL third person orbit cam
-	local distance = 10
-	local height = 2
+			if Freecam.Mode == "freecam" then
+				-- TRUE third person orbit cam
+				local distance = 10
+				local height = 2
 
-	local camOffset =
-		(rotCF.LookVector * -distance) +
-		Vector3.new(0, height, 0)
+				local offset =
+					(rot.LookVector * -distance) +
+					Vector3.new(0, height, 0)
 
-	local camWorldPos = focusPoint + camOffset
-
-	Camera.CFrame = CFrame.lookAt(camWorldPos, focusPoint)
-
-else
-	-- drone cam (true first person)
-	Camera.CFrame = CFrame.new(camPos) * rotCF
-end
-
-				-- drone cam (first person)
-				Camera.CFrame = baseCF
+				local camWorld = camPos + offset
+				Camera.CFrame = CFrame.lookAt(camWorld, camPos)
+			else
+				-- Drone cam (true first person)
+				Camera.CFrame = CFrame.new(camPos) * rot
 			end
 		end)
 	end
@@ -156,6 +149,7 @@ end
 		Freecam.Enabled = false
 
 		RunService:UnbindFromRenderStep("CactusFreecam")
+
 		unfreezeCharacter()
 
 		if Camera then
@@ -252,6 +246,10 @@ end
 	local droneBtn = makeButton("Drone Freecam : OFF")
 	local freeBtn  = makeButton("Freecam : OFF")
 
+	-- =========================
+	-- Buttons
+	-- =========================
+
 	droneBtn.MouseButton1Click:Connect(function()
 		if Freecam.Enabled and Freecam.Mode == "drone" then
 			stopFreecam()
@@ -261,13 +259,12 @@ end
 		end
 
 		Freecam.Mode = "drone"
-		startFreecam()
-
-		droneBtn.Text = "Drone Freecam : ON"
-		droneBtn.TextColor3 = Theme.TEXT
-
 		freeBtn.Text = "Freecam : OFF"
 		freeBtn.TextColor3 = Theme.TEXT_DIM
+
+		startFreecam()
+		droneBtn.Text = "Drone Freecam : ON"
+		droneBtn.TextColor3 = Theme.TEXT
 	end)
 
 	freeBtn.MouseButton1Click:Connect(function()
@@ -279,15 +276,24 @@ end
 		end
 
 		Freecam.Mode = "freecam"
-		startFreecam()
-
-		freeBtn.Text = "Freecam : ON"
-		freeBtn.TextColor3 = Theme.TEXT
-
 		droneBtn.Text = "Drone Freecam : OFF"
 		droneBtn.TextColor3 = Theme.TEXT_DIM
+
+		startFreecam()
+		freeBtn.Text = "Freecam : ON"
+		freeBtn.TextColor3 = Theme.TEXT
 	end)
 
+	LocalPlayer.CharacterAdded:Connect(function()
+		if Freecam.Enabled then
+			task.wait(0.2)
+			stopFreecam()
+			droneBtn.Text = "Drone Freecam : OFF"
+			freeBtn.Text = "Freecam : OFF"
+			droneBtn.TextColor3 = Theme.TEXT_DIM
+			freeBtn.TextColor3 = Theme.TEXT_DIM
+		end
+	end)
 end
 
 return Freecam
