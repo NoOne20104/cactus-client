@@ -2,7 +2,7 @@ local Freecam = {}
 
 function Freecam.Init(Client)
 
-	-- =========================
+	-- ========================= 
 	-- Services / Core
 	-- =========================
 
