@@ -124,13 +124,27 @@ function Freecam.Init(Client)
 
 			camPos = camPos + dir
 
-			local baseCF = CFrame.new(camPos) * rot
+local rotCF = CFrame.fromOrientation(pitch, yaw, 0)
+local focusPoint = camPos
 
-			if Freecam.Mode == "freecam" then
-				-- ✅ TRUE third person: pull camera back along look vector
-				local offset = baseCF.LookVector * -10 + Vector3.new(0, 2, 0)
-				Camera.CFrame = CFrame.new(camPos + offset, camPos)
-			else
+if Freecam.Mode == "freecam" then
+	-- ✅ REAL third person orbit cam
+	local distance = 10
+	local height = 2
+
+	local camOffset =
+		(rotCF.LookVector * -distance) +
+		Vector3.new(0, height, 0)
+
+	local camWorldPos = focusPoint + camOffset
+
+	Camera.CFrame = CFrame.lookAt(camWorldPos, focusPoint)
+
+else
+	-- drone cam (true first person)
+	Camera.CFrame = CFrame.new(camPos) * rotCF
+end
+
 				-- drone cam (first person)
 				Camera.CFrame = baseCF
 			end
