@@ -2,7 +2,7 @@ local Freecam = {}
 
 function Freecam.Init(Client)
 
-	-- ========================= 
+	-- =========================
 	-- Services / Core
 	-- =========================
 
@@ -40,7 +40,6 @@ function Freecam.Init(Client)
 
 		saved.Type = Camera.CameraType
 		saved.Subject = Camera.CameraSubject
-		saved.CFrame = Camera.CFrame
 		saved.MouseBehavior = UIS.MouseBehavior
 		saved.MouseIcon = UIS.MouseIconEnabled
 
@@ -57,7 +56,6 @@ function Freecam.Init(Client)
 			Enum.RenderPriority.Camera.Value,
 			function(dt)
 
-				-- mouse look (right click)
 				if looking then
 					local delta = UIS:GetMouseDelta()
 					yaw -= delta.X * Freecam.Sensitivity * 0.01
@@ -67,7 +65,6 @@ function Freecam.Init(Client)
 
 				local rot = CFrame.fromOrientation(pitch, yaw, 0)
 
-				-- movement
 				local dir = Vector3.zero
 				if UIS:IsKeyDown(Enum.KeyCode.W) then dir += rot.LookVector end
 				if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= rot.LookVector end
@@ -94,7 +91,6 @@ function Freecam.Init(Client)
 		if Camera then
 			Camera.CameraType = saved.Type
 			Camera.CameraSubject = saved.Subject
-			Camera.CFrame = Camera.CFrame -- use current, not old death cam
 		end
 
 		UIS.MouseBehavior = saved.MouseBehavior
@@ -102,7 +98,7 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- Right click control
+	-- Right click look
 	-- =========================
 
 	UIS.InputBegan:Connect(function(input)
@@ -125,13 +121,18 @@ function Freecam.Init(Client)
 	end)
 
 	-- =========================
-	-- HARD SAFETY (death fix)
+	-- HARD SAFETY (death fix + UI sync)
 	-- =========================
+
+	local uiReset -- assigned after UI is built
 
 	LocalPlayer.CharacterAdded:Connect(function()
 		if Freecam.Enabled then
 			task.wait()
 			stopFreecam()
+			if uiReset then
+				uiReset()
+			end
 		end
 	end)
 
@@ -170,8 +171,8 @@ function Freecam.Init(Client)
 	title.Parent = frame
 
 	local holder = Instance.new("Frame")
-	holder.Size = UDim2.new(1,-20,1,-40)
-	holder.Position = UDim2.new(0,10,0,36)
+	holder.Size = UDim2.new(1,-20,1,-44)
+	holder.Position = UDim2.new(0,10,0,32) -- ⬆ moved up slightly
 	holder.BackgroundTransparency = 1
 	holder.Parent = frame
 
@@ -195,9 +196,8 @@ function Freecam.Init(Client)
 
 	local toggleBtn = makeButton("Drone Freecam : OFF")
 
-	-- spacer (pushes slider lower)
 	local spacer = Instance.new("Frame")
-	spacer.Size = UDim2.new(1,0,0,8)
+	spacer.Size = UDim2.new(1,0,0,10)
 	spacer.BackgroundTransparency = 1
 	spacer.Parent = holder
 
@@ -261,16 +261,24 @@ function Freecam.Init(Client)
 	end)
 
 	-- =========================
+	-- UI state helpers
+	-- =========================
+
+	uiReset = function()
+		speedLabel.Visible = false
+		slider.Visible = false
+		toggleBtn.Text = "Drone Freecam : OFF"
+		toggleBtn.TextColor3 = Theme.TEXT_DIM
+	end
+
+	-- =========================
 	-- Button
 	-- =========================
 
 	toggleBtn.MouseButton1Click:Connect(function()
 		if Freecam.Enabled then
 			stopFreecam()
-			speedLabel.Visible = false
-			slider.Visible = false
-			toggleBtn.Text = "Drone Freecam : OFF"
-			toggleBtn.TextColor3 = Theme.TEXT_DIM
+			uiReset()
 		else
 			startFreecam()
 			speedLabel.Visible = true
