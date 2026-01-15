@@ -13,12 +13,14 @@ function Freecam.Init(Client)
 	local Theme = Client.Theme
 	local Camera = workspace.CurrentCamera
 
+	if not Page then warn("Freecam page missing") return end
+
 	-- =========================
 	-- State
 	-- =========================
 
 	Freecam.Enabled = false
-	Freecam.Mode = "drone" -- "drone" or "freecam"
+	Freecam.Mode = "drone"
 	Freecam.Speed = 60
 	Freecam.Sensitivity = 0.25
 
@@ -70,7 +72,7 @@ function Freecam.Init(Client)
 	end
 
 	-- =========================
-	-- Core Freecam
+	-- Core camera
 	-- =========================
 
 	local function startFreecam()
@@ -120,25 +122,14 @@ function Freecam.Init(Client)
 				dir = dir.Unit * Freecam.Speed * dt
 			end
 
-			camPos = camPos + dir
-
-			-- =========================
-			-- CAMERA BUILD (FIXED)
-			-- =========================
+			camPos += dir
 
 			if Freecam.Mode == "freecam" then
-				-- TRUE third person orbit cam
 				local distance = 10
 				local height = 2
-
-				local offset =
-					(rot.LookVector * -distance) +
-					Vector3.new(0, height, 0)
-
-				local camWorld = camPos + offset
+				local camWorld = camPos - rot.LookVector * distance + Vector3.new(0,height,0)
 				Camera.CFrame = CFrame.lookAt(camWorld, camPos)
 			else
-				-- Drone cam (true first person)
 				Camera.CFrame = CFrame.new(camPos) * rot
 			end
 		end)
@@ -149,7 +140,6 @@ function Freecam.Init(Client)
 		Freecam.Enabled = false
 
 		RunService:UnbindFromRenderStep("CactusFreecam")
-
 		unfreezeCharacter()
 
 		if Camera then
@@ -186,7 +176,7 @@ function Freecam.Init(Client)
 	end)
 
 	-- =========================
-	-- GUI
+	-- GUI (MATCHES YOUR CLIENT)
 	-- =========================
 
 	for _,child in ipairs(Page:GetChildren()) do
@@ -197,7 +187,7 @@ function Freecam.Init(Client)
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusFreecamFrame"
-	frame.Size = UDim2.new(0,220,0,200)
+	frame.Size = UDim2.new(0,220,0,150)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -284,16 +274,6 @@ function Freecam.Init(Client)
 		freeBtn.TextColor3 = Theme.TEXT
 	end)
 
-	LocalPlayer.CharacterAdded:Connect(function()
-		if Freecam.Enabled then
-			task.wait(0.2)
-			stopFreecam()
-			droneBtn.Text = "Drone Freecam : OFF"
-			freeBtn.Text = "Freecam : OFF"
-			droneBtn.TextColor3 = Theme.TEXT_DIM
-			freeBtn.TextColor3 = Theme.TEXT_DIM
-		end
-	end)
 end
 
 return Freecam
