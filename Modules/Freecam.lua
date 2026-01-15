@@ -1,4 +1,4 @@
-local Freecam = {}
+local Freecam = {} 
 
 function Freecam.Init(Client)
 
