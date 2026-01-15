@@ -160,7 +160,7 @@ function Freecam.Init(Client)
 	stroke.Transparency = 0.4
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1,-12,0,23)
+	title.Size = UDim2.new(1,-12,0,22)
 	title.Position = UDim2.new(0,10,0,4)
 	title.BackgroundTransparency = 1
 	title.Text = "Freecam"
