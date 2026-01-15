@@ -95,7 +95,6 @@ function Freecam.Init(Client)
 		yaw = math.atan2(-look.X, -look.Z)
 		pitch = math.asin(look.Y)
 
-		-- 🔥 REAL CAMERA POSITION (fix)
 		camPos = Camera.CFrame.Position
 
 		RunService:BindToRenderStep("CactusFreecam", Enum.RenderPriority.Camera.Value, function(dt)
@@ -123,17 +122,17 @@ function Freecam.Init(Client)
 				dir = dir.Unit * Freecam.Speed * dt
 			end
 
-			-- 🔥 update true camera position
 			camPos = camPos + dir
 
-			local base = CFrame.new(camPos) * rot
+			local baseCF = CFrame.new(camPos) * rot
 
 			if Freecam.Mode == "freecam" then
-				-- third person offset (NO stacking bug)
-				Camera.CFrame = base * CFrame.new(0, 2, 10)
+				-- ✅ TRUE third person: pull camera back along look vector
+				local offset = baseCF.LookVector * -10 + Vector3.new(0, 2, 0)
+				Camera.CFrame = CFrame.new(camPos + offset, camPos)
 			else
-				-- drone cam
-				Camera.CFrame = base
+				-- drone cam (first person)
+				Camera.CFrame = baseCF
 			end
 		end)
 	end
