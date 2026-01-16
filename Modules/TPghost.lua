@@ -48,104 +48,7 @@ function TPghost.Init(Client)
 	local frozenClone = nil
 
 	-- =========================
-	-- Return outline system (NEW, VISUAL ONLY)
-	-- =========================
-
-	local returnOutline = nil
-	local distanceLabel = nil
-	local showOutline = false
-	local distanceConn = nil
-
-	local function destroyReturnOutline()
-		if distanceConn then
-			distanceConn:Disconnect()
-			distanceConn = nil
-		end
-
-		if returnOutline then
-			returnOutline:Destroy()
-			returnOutline = nil
-		end
-	end
-
-	local function createReturnOutline(cf)
-		if not character then return end
-
-		destroyReturnOutline()
-
-		pcall(function()
-			character.Archivable = true
-			local clone = character:Clone()
-			clone.Name = "TPghostReturnOutline"
-			clone.Parent = workspace
-
-			if clone.PrimaryPart then
-				clone:SetPrimaryPartCFrame(cf)
-			else
-				clone:MoveTo(cf.Position)
-			end
-
-			for _, v in ipairs(clone:GetDescendants()) do
-				if v:IsA("BasePart") then
-					v.Anchored = true
-					v.CanCollide = false
-					v.Material = Enum.Material.Neon
-					v.Color = Theme.TEXT
-					v.Transparency = 0.35
-
-				elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("SurfaceAppearance") then
-					v:Destroy()
-
-				elseif v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") then
-					v:Destroy()
-
-				elseif v:IsA("Accessory") or v:IsA("Humanoid") then
-					v:Destroy()
-
-				elseif v:IsA("Script") or v:IsA("LocalScript") then
-					v:Destroy()
-				end
-			end
-
-			-- ===== Distance label =====
-
-			local adornee = clone:FindFirstChild("Head") or clone.PrimaryPart
-			if adornee then
-				local bill = Instance.new("BillboardGui")
-				bill.Name = "TPghostDistance"
-				bill.Adornee = adornee
-				bill.Size = UDim2.new(0,140,0,32)
-				bill.StudsOffset = Vector3.new(0,2.6,0)
-				bill.AlwaysOnTop = true
-				bill.Parent = clone
-
-				local txt = Instance.new("TextLabel")
-				txt.Size = UDim2.new(1,0,1,0)
-				txt.BackgroundTransparency = 1
-				txt.Text = "0.0m"
-				txt.Font = Enum.Font.Code
-				txt.TextSize = 14
-				txt.TextColor3 = Theme.TEXT
-				txt.TextStrokeTransparency = 0.3
-				txt.Parent = bill
-
-				distanceLabel = txt
-			end
-
-			returnOutline = clone
-
-			-- ===== Live distance updater (VISUAL ONLY) =====
-
-			distanceConn = RunService.Heartbeat:Connect(function()
-				if not returnOutline or not root or not startCFrame or not distanceLabel then return end
-				local dist = (root.Position - startCFrame.Position).Magnitude
-				distanceLabel.Text = string.format("Distance: %.1f", dist)
-			end)
-		end)
-	end
-
-	-- =========================
-	-- Enable / Disable (UNCHANGED LOGIC, outline calls added)
+	-- Enable / Disable (UNCHANGED)
 	-- =========================
 
 	local function enableTPGhost()
@@ -167,10 +70,6 @@ function TPghost.Init(Client)
 			frozenClone = nil
 		end
 
-		if showOutline then
-			createReturnOutline(startCFrame)
-		end
-
 		camera.CameraSubject = humanoid
 	end
 
@@ -190,8 +89,6 @@ function TPghost.Init(Client)
 			frozenClone:Destroy()
 			frozenClone = nil
 		end
-
-		destroyReturnOutline()
 
 		if humanoid then
 			camera.CameraSubject = humanoid
@@ -276,10 +173,97 @@ function TPghost.Init(Client)
 	end)
 
 	-- =========================
-	-- GUI (UNCHANGED LOGIC)
+	-- GUI (Cactus style)
 	-- =========================
-	-- (your existing GUI block here – unchanged)
-	-- ESP button still toggles showOutline and calls create/destroy
+
+	for _, child in ipairs(Page:GetChildren()) do
+		if child:IsA("Frame") and child.Name == "CactusTPGhostFrame" then
+			child:Destroy()
+		end
+	end
+
+	local frame = Instance.new("Frame")
+	frame.Name = "CactusTPGhostFrame"
+	frame.Size = UDim2.new(0,220,0,200)
+	frame.Position = UDim2.new(0,10,0,10)
+	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
+	frame.BorderSizePixel = 0
+	frame.Parent = Page
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Theme.STROKE
+	stroke.Transparency = 0.4
+	stroke.Parent = frame
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1,-12,0,26)
+	title.Position = UDim2.new(0,10,0,4)
+	title.BackgroundTransparency = 1
+	title.Text = "TPghost"
+	title.Font = Enum.Font.Code
+	title.TextSize = 16
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextColor3 = Theme.TEXT
+	title.Parent = frame
+
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(1,-20,0,0)
+	holder.Position = UDim2.new(0,10,0,36)
+	holder.BackgroundTransparency = 1
+	holder.AutomaticSize = Enum.AutomaticSize.Y
+	holder.Parent = frame
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0,6)
+	layout.Parent = holder
+
+	local function makeButton(text, order)
+		local b = Instance.new("TextButton")
+		b.Size = UDim2.new(1,0,0,30)
+		b.BackgroundColor3 = Theme.BUTTON
+		b.Text = text
+		b.Font = Enum.Font.Code
+		b.TextSize = 14
+		b.TextColor3 = Theme.TEXT_DIM
+		b.BorderSizePixel = 0
+		b.LayoutOrder = order
+		b.AutoButtonColor = false
+		b.Parent = holder
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+
+		local s = Instance.new("UIStroke")
+		s.Color = Theme.STROKE
+		s.Transparency = 0.7
+		s.Parent = b
+
+		return b
+	end
+
+	local tpghostBtn = makeButton("TPghost : OFF", 10)
+	local disableBtn = makeButton("Disable TPghost", 30)
+
+	-- =========================
+	-- Buttons (TOGGLE + DISABLE)
+	-- =========================
+
+	tpghostBtn.MouseButton1Click:Connect(function()
+		if enabled then
+			disableTPGhost()
+			tpghostBtn.Text = "TPghost : OFF"
+			tpghostBtn.TextColor3 = Theme.TEXT_DIM
+		else
+			enableTPGhost()
+			tpghostBtn.Text = "TPghost : ON"
+			tpghostBtn.TextColor3 = Theme.TEXT
+		end
+	end)
+
+	disableBtn.MouseButton1Click:Connect(function()
+		disableTPGhost()
+		tpghostBtn.Text = "TPghost : OFF"
+		tpghostBtn.TextColor3 = Theme.TEXT_DIM
+	end)
 end
 
 return TPghost
