@@ -200,7 +200,7 @@ function TPghost.Init(Client)
 	title.Size = UDim2.new(1,-12,0,26)
 	title.Position = UDim2.new(0,10,0,4)
 	title.BackgroundTransparency = 1
-	title.Text = "Ghost"
+	title.Text = "TPghost"
 	title.Font = Enum.Font.Code
 	title.TextSize = 16
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -240,29 +240,29 @@ function TPghost.Init(Client)
 		return b
 	end
 
-	local ghostBtn   = makeButton("Ghost : OFF", 10)
-	local disableBtn = makeButton("Disable Ghost", 30)
+	local tpghostBtn = makeButton("TPghost : OFF", 10)
+	local disableBtn = makeButton("Disable TPghost", 30)
 
 	-- =========================
 	-- Buttons (TOGGLE + DISABLE)
 	-- =========================
 
-	ghostBtn.MouseButton1Click:Connect(function()
+	tpghostBtn.MouseButton1Click:Connect(function()
 		if enabled then
 			disableTPGhost()
-			ghostBtn.Text = "Ghost : OFF"
-			ghostBtn.TextColor3 = Theme.TEXT_DIM
+			tpghostBtn.Text = "TPghost : OFF"
+			tpghostBtn.TextColor3 = Theme.TEXT_DIM
 		else
 			enableTPGhost()
-			ghostBtn.Text = "Ghost : ON"
-			ghostBtn.TextColor3 = Theme.TEXT
+			tpghostBtn.Text = "TPghost : ON"
+			tpghostBtn.TextColor3 = Theme.TEXT
 		end
 	end)
 
 	disableBtn.MouseButton1Click:Connect(function()
 		disableTPGhost()
-		ghostBtn.Text = "Ghost : OFF"
-		ghostBtn.TextColor3 = Theme.TEXT_DIM
+		tpghostBtn.Text = "TPghost : OFF"
+		tpghostBtn.TextColor3 = Theme.TEXT_DIM
 	end)
 end
 
