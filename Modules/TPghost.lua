@@ -186,7 +186,7 @@ function TPGhost.Init(Client)
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusTPGhostFrame"
-	frame.Size = UDim2.new(0,220,0,140)
+	frame.Size = UDim2.new(0,220,0,200)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
