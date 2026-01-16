@@ -6,14 +6,12 @@ function TPghost.Init(Client)
 	-- Services / Core
 	-- =========================
 
-	local Players = game:GetService("Players")
 	local UserInputService = game:GetService("UserInputService")
 	local RunService = Client.Services.RunService
 
 	local player = Client.Player
 	local Page = Client.Pages.TPghost
 	local Theme = Client.Theme
-
 	local camera = workspace.CurrentCamera
 
 	-- =========================
@@ -175,7 +173,7 @@ function TPghost.Init(Client)
 	end)
 
 	-- =========================
-	-- GUI (REWRITTEN, SAFE)
+	-- GUI (SAFE, FIXED)
 	-- =========================
 
 	for _, child in ipairs(Page:GetChildren()) do
@@ -233,7 +231,6 @@ function TPghost.Init(Client)
 		b.LayoutOrder = order
 		b.AutoButtonColor = false
 		b.Parent = holder
-		b.ZIndex = 2
 		Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
 
 		local s = Instance.new("UIStroke")
@@ -249,7 +246,7 @@ function TPghost.Init(Client)
 	local disableBtn = makeButton("Disable TPGhost", 30)
 
 	-- =========================
-	-- Buttons (UNCHANGED LOGIC)
+	-- Buttons (UNCHANGED)
 	-- =========================
 
 	enableBtn.MouseButton1Click:Connect(function()
