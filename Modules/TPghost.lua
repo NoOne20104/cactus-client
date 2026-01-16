@@ -1,6 +1,6 @@
-local TPGhost = {}
+local TPghost = {}
 
-function TPGhost.Init(Client)
+function TPghost.Init(Client)
 
 	-- =========================
 	-- Services / Core
@@ -11,7 +11,7 @@ function TPGhost.Init(Client)
 	local RunService = Client.Services.RunService
 
 	local player = Client.Player
-	local Page = Client.Pages.TPGhost
+	local Page = Client.Pages.TPghost
 	local Theme = Client.Theme
 
 	local camera = workspace.CurrentCamera
