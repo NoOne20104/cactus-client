@@ -48,7 +48,56 @@ function TPghost.Init(Client)
 	local frozenClone = nil
 
 	-- =========================
-	-- Enable / Disable (UNCHANGED)
+	-- Return outline system (NEW)
+	-- =========================
+
+	local returnOutline = nil
+	local showOutline = false
+
+	local function destroyReturnOutline()
+		if returnOutline then
+			returnOutline:Destroy()
+			returnOutline = nil
+		end
+	end
+
+	local function createReturnOutline(cf)
+		if not character then return end
+
+		destroyReturnOutline()
+
+		pcall(function()
+			character.Archivable = true
+			local clone = character:Clone()
+			clone.Name = "TPghostReturnOutline"
+			clone.Parent = workspace
+
+			if clone.PrimaryPart then
+				clone:SetPrimaryPartCFrame(cf)
+			else
+				clone:MoveTo(cf.Position)
+			end
+
+			for _, v in ipairs(clone:GetDescendants()) do
+				if v:IsA("BasePart") then
+					v.Anchored = true
+					v.CanCollide = false
+					v.Material = Enum.Material.Neon
+					v.Color = Theme.TEXT
+					v.Transparency = 0.45
+				elseif v:IsA("Decal") or v:IsA("Texture") then
+					v:Destroy()
+				elseif v:IsA("Script") or v:IsA("LocalScript") then
+					v:Destroy()
+				end
+			end
+
+			returnOutline = clone
+		end)
+	end
+
+	-- =========================
+	-- Enable / Disable (UNCHANGED logic, outline calls added)
 	-- =========================
 
 	local function enableTPGhost()
@@ -70,6 +119,10 @@ function TPghost.Init(Client)
 			frozenClone = nil
 		end
 
+		if showOutline then
+			createReturnOutline(startCFrame)
+		end
+
 		camera.CameraSubject = humanoid
 	end
 
@@ -89,6 +142,8 @@ function TPghost.Init(Client)
 			frozenClone:Destroy()
 			frozenClone = nil
 		end
+
+		destroyReturnOutline()
 
 		if humanoid then
 			camera.CameraSubject = humanoid
@@ -184,7 +239,7 @@ function TPghost.Init(Client)
 
 	local frame = Instance.new("Frame")
 	frame.Name = "CactusTPGhostFrame"
-	frame.Size = UDim2.new(0,220,0,200)
+	frame.Size = UDim2.new(0,220,0,230)
 	frame.Position = UDim2.new(0,10,0,10)
 	frame.BackgroundColor3 = Color3.fromRGB(14,14,14)
 	frame.BorderSizePixel = 0
@@ -241,10 +296,13 @@ function TPghost.Init(Client)
 	end
 
 	local tpghostBtn = makeButton("TPghost : OFF", 10)
+	local espBtn     = makeButton("ESP : OFF", 20)
 	local disableBtn = makeButton("Disable TPghost", 30)
 
+	espBtn.Visible = false
+
 	-- =========================
-	-- Buttons (TOGGLE + DISABLE)
+	-- Buttons
 	-- =========================
 
 	tpghostBtn.MouseButton1Click:Connect(function()
@@ -252,10 +310,12 @@ function TPghost.Init(Client)
 			disableTPGhost()
 			tpghostBtn.Text = "TPghost : OFF"
 			tpghostBtn.TextColor3 = Theme.TEXT_DIM
+			espBtn.Visible = false
 		else
 			enableTPGhost()
 			tpghostBtn.Text = "TPghost : ON"
 			tpghostBtn.TextColor3 = Theme.TEXT
+			espBtn.Visible = true
 		end
 	end)
 
@@ -263,6 +323,21 @@ function TPghost.Init(Client)
 		disableTPGhost()
 		tpghostBtn.Text = "TPghost : OFF"
 		tpghostBtn.TextColor3 = Theme.TEXT_DIM
+		espBtn.Visible = false
+	end)
+
+	espBtn.MouseButton1Click:Connect(function()
+		showOutline = not showOutline
+
+		if showOutline and enabled and startCFrame then
+			createReturnOutline(startCFrame)
+			espBtn.Text = "ESP : ON"
+			espBtn.TextColor3 = Theme.TEXT
+		else
+			destroyReturnOutline()
+			espBtn.Text = "ESP : OFF"
+			espBtn.TextColor3 = Theme.TEXT_DIM
+		end
 	end)
 end
 
