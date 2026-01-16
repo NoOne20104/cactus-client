@@ -265,4 +265,4 @@ function TPghost.Init(Client)
 	end)
 end
 
-return TPGhost
+return TPghost
