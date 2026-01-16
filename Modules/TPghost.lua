@@ -211,7 +211,8 @@ function TPGhost.Init(Client)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1,-20,1,-40)
 	holder.Position = UDim2.new(0,10,0,36)
-	holder.BackgroundTransparency = 1
+	holder.BackgroundTransparency = 0
+    holder.BackgroundColor3 = Color3.fromRGB(255,0,0)
 	holder.Parent = frame
 
 	local layout = Instance.new("UIListLayout")
