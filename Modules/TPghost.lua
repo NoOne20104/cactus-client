@@ -17,7 +17,7 @@ function TPGhost.Init(Client)
 	local camera = workspace.CurrentCamera
 
 	-- =========================
-	-- Character handling
+	-- Character handling (UNCHANGED)
 	-- =========================
 
 	local character, humanoid, root, head
@@ -37,7 +37,7 @@ function TPGhost.Init(Client)
 	player.CharacterAdded:Connect(hookCharacter)
 
 	-- =========================
-	-- State
+	-- State (UNCHANGED)
 	-- =========================
 
 	local enabled = false
@@ -50,7 +50,7 @@ function TPGhost.Init(Client)
 	local frozenClone = nil
 
 	-- =========================
-	-- Enable / Disable (same logic)
+	-- Enable / Disable (UNCHANGED)
 	-- =========================
 
 	local function enableTPGhost()
@@ -98,7 +98,7 @@ function TPGhost.Init(Client)
 	end
 
 	-- =========================
-	-- Core loop (UNCHANGED LOGIC)
+	-- Core loop (UNCHANGED)
 	-- =========================
 
 	RunService.Heartbeat:Connect(function()
@@ -175,7 +175,7 @@ function TPGhost.Init(Client)
 	end)
 
 	-- =========================
-	-- GUI (Cactus style)
+	-- GUI (REWRITTEN, SAFE)
 	-- =========================
 
 	for _, child in ipairs(Page:GetChildren()) do
@@ -193,9 +193,10 @@ function TPGhost.Init(Client)
 	frame.Parent = Page
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
 
-	local stroke = Instance.new("UIStroke", frame)
+	local stroke = Instance.new("UIStroke")
 	stroke.Color = Theme.STROKE
 	stroke.Transparency = 0.4
+	stroke.Parent = frame
 
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1,-12,0,26)
@@ -209,10 +210,10 @@ function TPGhost.Init(Client)
 	title.Parent = frame
 
 	local holder = Instance.new("Frame")
-	holder.Size = UDim2.new(1,-20,1,-40)
+	holder.Size = UDim2.new(1,-20,0,0)
 	holder.Position = UDim2.new(0,10,0,36)
-	holder.BackgroundTransparency = 0
-    holder.BackgroundColor3 = Color3.fromRGB(255,0,0)
+	holder.BackgroundTransparency = 1
+	holder.AutomaticSize = Enum.AutomaticSize.Y
 	holder.Parent = frame
 
 	local layout = Instance.new("UIListLayout")
@@ -230,8 +231,17 @@ function TPGhost.Init(Client)
 		b.TextColor3 = Theme.TEXT_DIM
 		b.BorderSizePixel = 0
 		b.LayoutOrder = order
+		b.AutoButtonColor = false
 		b.Parent = holder
+		b.ZIndex = 2
 		Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+
+		local s = Instance.new("UIStroke")
+		s.Color = Theme.STROKE
+		s.Transparency = 0.7
+		s.Thickness = 1
+		s.Parent = b
+
 		return b
 	end
 
@@ -239,7 +249,7 @@ function TPGhost.Init(Client)
 	local disableBtn = makeButton("Disable TPGhost", 30)
 
 	-- =========================
-	-- Buttons
+	-- Buttons (UNCHANGED LOGIC)
 	-- =========================
 
 	enableBtn.MouseButton1Click:Connect(function()
