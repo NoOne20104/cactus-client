@@ -173,7 +173,7 @@ function TPghost.Init(Client)
 	end)
 
 	-- =========================
-	-- GUI (SAFE, FIXED)
+	-- GUI (Cactus style)
 	-- =========================
 
 	for _, child in ipairs(Page:GetChildren()) do
@@ -200,7 +200,7 @@ function TPghost.Init(Client)
 	title.Size = UDim2.new(1,-12,0,26)
 	title.Position = UDim2.new(0,10,0,4)
 	title.BackgroundTransparency = 1
-	title.Text = "TP Ghost"
+	title.Text = "Ghost"
 	title.Font = Enum.Font.Code
 	title.TextSize = 16
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -216,7 +216,6 @@ function TPghost.Init(Client)
 
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0,6)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = holder
 
 	local function makeButton(text, order)
@@ -236,29 +235,34 @@ function TPghost.Init(Client)
 		local s = Instance.new("UIStroke")
 		s.Color = Theme.STROKE
 		s.Transparency = 0.7
-		s.Thickness = 1
 		s.Parent = b
 
 		return b
 	end
 
-	local enableBtn  = makeButton("TPGhost : OFF", 10)
-	local disableBtn = makeButton("Disable TPGhost", 30)
+	local ghostBtn   = makeButton("Ghost : OFF", 10)
+	local disableBtn = makeButton("Disable Ghost", 30)
 
 	-- =========================
-	-- Buttons (UNCHANGED)
+	-- Buttons (TOGGLE + DISABLE)
 	-- =========================
 
-	enableBtn.MouseButton1Click:Connect(function()
-		enableTPGhost()
-		enableBtn.Text = "TPGhost : ON"
-		enableBtn.TextColor3 = Theme.TEXT
+	ghostBtn.MouseButton1Click:Connect(function()
+		if enabled then
+			disableTPGhost()
+			ghostBtn.Text = "Ghost : OFF"
+			ghostBtn.TextColor3 = Theme.TEXT_DIM
+		else
+			enableTPGhost()
+			ghostBtn.Text = "Ghost : ON"
+			ghostBtn.TextColor3 = Theme.TEXT
+		end
 	end)
 
 	disableBtn.MouseButton1Click:Connect(function()
 		disableTPGhost()
-		enableBtn.Text = "TPGhost : OFF"
-		enableBtn.TextColor3 = Theme.TEXT_DIM
+		ghostBtn.Text = "Ghost : OFF"
+		ghostBtn.TextColor3 = Theme.TEXT_DIM
 	end)
 end
 
