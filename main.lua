@@ -434,6 +434,7 @@ local FullbrightPage = addTabAndPage("Fullbright", 6)
 local FlyPage       = addTabAndPage("Fly", 6)
 local FreecamPage = addTabAndPage("Freecam", 7)
 local TPghostPage = addTabAndPage("TPghost", 8)
+local PearlPage = addTabAndPage("Pearl", 9)
 
 setActivePage("Bot")
 
@@ -504,19 +505,20 @@ local Client = {
 	Theme = THEME,
         Modules = {},
 	Player = LocalPlayer,
-	Pages = {
-		Bot = BotPage,
-		Teleport = TeleportPage,
-		Waypoints = WaypointsPage,
-		ESP = ESPPage,
-		Dev = DevPage,
-                Phase = PhasePage,
-                WorldScanner = WorldScannerPage,
-                Fullbright = FullbrightPage,
-                Fly = FlyPage,
-                Freecam = FreecamPage,
-                TPghost = TPghostPage,
-	},
+    Pages = {
+	Bot = BotPage,
+	Teleport = TeleportPage,
+	Waypoints = WaypointsPage,
+	ESP = ESPPage,
+	Dev = DevPage,
+	Phase = PhasePage,
+	WorldScanner = WorldScannerPage,
+	Fullbright = FullbrightPage,
+	Fly = FlyPage,
+	Freecam = FreecamPage,
+	TPghost = TPghostPage,
+	Pearl = PearlPage,
+},
 	Services = {
 		Players = Players,
 		RunService = RunService,
@@ -535,6 +537,7 @@ local MODULES = {
     Fly = "https://raw.githubusercontent.com/NoOne20104/cactus-client/main/Modules/Fly.lua",
     Freecam = "https://raw.githubusercontent.com/NoOne20104/cactus-client/main/Modules/Freecam.lua",
     TPghost = "https://raw.githubusercontent.com/NoOne20104/cactus-client/main/Modules/TPghost.lua",
+	Pearl = "https://raw.githubusercontent.com/NoOne20104/cactus-client/main/Modules/Pearl.lua",
     
    }
 
