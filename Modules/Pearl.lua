@@ -17,7 +17,7 @@ function EnderPearl.Init(Client)
 
 	local LocalPlayer = Client.Player
 	local Theme = Client.Theme
-	local Page = Client.Pages.EnderPearl
+	local Page = Client.Pages.Pearl
 
 	if not Page then
 		warn("[EnderPearl] Page not found")
