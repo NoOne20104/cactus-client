@@ -1,5 +1,5 @@
 -- Pearl.lua
--- Cactus Client – Ender Pearl Tool
+-- Cactus Client – Pearl Tool
 
 local Pearl = {}
 
@@ -109,9 +109,10 @@ function Pearl.Init(Client)
 			return
 		end
 
+		-- Create pearl
 		local pearl = Instance.new("Part")
 
-		pearl.Name = "GreenEnderPearl"
+		pearl.Name = "GreenPearl"
 		pearl.Shape = Enum.PartType.Ball
 		pearl.Size = Vector3.new(1.2, 1.2, 1.2)
 		pearl.Material = Enum.Material.Neon
@@ -122,6 +123,7 @@ function Pearl.Init(Client)
 		pearl.CanTouch = false
 		pearl.CastShadow = false
 
+		-- Aim toward mouse
 		local mouseRay =
 			camera:ViewportPointToRay(
 				mouse.X,
@@ -131,12 +133,14 @@ function Pearl.Init(Client)
 		local direction =
 			mouseRay.Direction.Unit
 
+		-- Spawn slightly in front of player
 		pearl.Position =
 			head.Position
 			+ direction * 3
 
 		pearl.Parent = workspace
 
+		-- Throw using slider speed
 		pearl.AssemblyLinearVelocity =
 			direction * State.ThrowSpeed
 
@@ -222,6 +226,7 @@ function Pearl.Init(Client)
 
 							pearl:Destroy()
 
+							-- Teleport slightly above impact
 							character:PivotTo(
 								CFrame.new(
 									impactPosition
@@ -238,6 +243,7 @@ function Pearl.Init(Client)
 					currentPosition
 			end)
 
+		-- Remove pearl if it never hits anything
 		Debris:AddItem(pearl, 15)
 	end
 
@@ -349,11 +355,15 @@ function Pearl.Init(Client)
 	local toggleButton =
 		Instance.new("TextButton")
 
+	toggleButton.Name = "PearlToggle"
+
 	toggleButton.Size =
 		UDim2.new(1, 0, 0, 32)
 
 	toggleButton.BackgroundColor3 =
 		Theme.BUTTON
+
+	toggleButton.BorderSizePixel = 0
 
 	toggleButton.Text =
 		"Pearl Throwing : OFF"
@@ -367,6 +377,7 @@ function Pearl.Init(Client)
 		Theme.TEXT_DIM
 
 	toggleButton.LayoutOrder = 1
+	toggleButton.Visible = true
 	toggleButton.Parent = scroll
 
 	Instance.new(
@@ -381,12 +392,14 @@ function Pearl.Init(Client)
 	local sliderHolder =
 		Instance.new("Frame")
 
+	sliderHolder.Name = "PearlSpeedSlider"
+
 	sliderHolder.Size =
 		UDim2.new(1, 0, 0, 52)
 
 	sliderHolder.BackgroundTransparency = 1
 
-	-- Always directly below toggle
+	-- Directly below Pearl toggle
 	sliderHolder.LayoutOrder = 2
 
 	-- Hidden until activated
@@ -444,6 +457,10 @@ function Pearl.Init(Client)
 		"UICorner",
 		sliderBackground
 	).CornerRadius = UDim.new(1, 0)
+
+	-- =========================
+	-- Starting slider value
+	-- =========================
 
 	local startingPercent =
 		(State.ThrowSpeed - MIN_THROW_SPEED)
@@ -691,7 +708,8 @@ function Pearl.Init(Client)
 			return
 		end
 
-		-- Never throw while using CactusClient
+		-- Don't throw while interacting
+		-- with CactusClient
 		if isMouseOverClientGui() then
 			return
 		end
