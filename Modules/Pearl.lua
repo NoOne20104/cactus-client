@@ -32,7 +32,7 @@ function Pearl.Init(Client)
 	-- =========================
 
 	local MIN_THROW_SPEED = 50
-	local MAX_THROW_SPEED = 700
+	local MAX_THROW_SPEED = 1000
 	local DEFAULT_THROW_SPEED = 300
 
 	-- =========================
@@ -122,7 +122,6 @@ function Pearl.Init(Client)
 		pearl.CanTouch = false
 		pearl.CastShadow = false
 
-		-- Aim toward mouse
 		local mouseRay =
 			camera:ViewportPointToRay(
 				mouse.X,
@@ -132,14 +131,12 @@ function Pearl.Init(Client)
 		local direction =
 			mouseRay.Direction.Unit
 
-		-- Spawn slightly in front of player
 		pearl.Position =
 			head.Position
 			+ direction * 3
 
 		pearl.Parent = workspace
 
-		-- Throw using slider speed
 		pearl.AssemblyLinearVelocity =
 			direction * State.ThrowSpeed
 
@@ -225,7 +222,6 @@ function Pearl.Init(Client)
 
 							pearl:Destroy()
 
-							-- Teleport slightly above impact
 							character:PivotTo(
 								CFrame.new(
 									impactPosition
@@ -319,6 +315,9 @@ function Pearl.Init(Client)
 	layout.Padding =
 		UDim.new(0, 10)
 
+	layout.SortOrder =
+		Enum.SortOrder.LayoutOrder
+
 	layout.Parent = scroll
 
 	local pad =
@@ -367,8 +366,8 @@ function Pearl.Init(Client)
 	toggleButton.TextColor3 =
 		Theme.TEXT_DIM
 
-	toggleButton.Parent =
-		scroll
+	toggleButton.LayoutOrder = 1
+	toggleButton.Parent = scroll
 
 	Instance.new(
 		"UICorner",
@@ -377,7 +376,6 @@ function Pearl.Init(Client)
 
 	-- =========================
 	-- Speed slider holder
-	-- Hidden until enabled
 	-- =========================
 
 	local sliderHolder =
@@ -387,11 +385,17 @@ function Pearl.Init(Client)
 		UDim2.new(1, 0, 0, 52)
 
 	sliderHolder.BackgroundTransparency = 1
+
+	-- Always directly below toggle
+	sliderHolder.LayoutOrder = 2
+
+	-- Hidden until activated
 	sliderHolder.Visible = false
+
 	sliderHolder.Parent = scroll
 
 	-- =========================
-	-- Speed value
+	-- Speed label
 	-- =========================
 
 	local speedLabel =
@@ -440,10 +444,6 @@ function Pearl.Init(Client)
 		"UICorner",
 		sliderBackground
 	).CornerRadius = UDim.new(1, 0)
-
-	-- =========================
-	-- Starting value
-	-- =========================
 
 	local startingPercent =
 		(State.ThrowSpeed - MIN_THROW_SPEED)
@@ -509,7 +509,7 @@ function Pearl.Init(Client)
 	).CornerRadius = UDim.new(1, 0)
 
 	-- =========================
-	-- Invisible slider input
+	-- Slider input
 	-- =========================
 
 	local sliderInput =
@@ -599,7 +599,7 @@ function Pearl.Init(Client)
 	end
 
 	-- =========================
-	-- Slider input
+	-- Slider events
 	-- =========================
 
 	sliderInput.InputBegan:Connect(function(input)
@@ -654,8 +654,6 @@ function Pearl.Init(Client)
 		State.Enabled =
 			not State.Enabled
 
-		-- Slider only exists visually
-		-- while pearl throwing is enabled
 		sliderHolder.Visible =
 			State.Enabled
 
@@ -693,8 +691,7 @@ function Pearl.Init(Client)
 			return
 		end
 
-		-- Never throw when clicking
-		-- anywhere inside CactusClient
+		-- Never throw while using CactusClient
 		if isMouseOverClientGui() then
 			return
 		end
