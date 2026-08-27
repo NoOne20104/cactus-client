@@ -11,9 +11,9 @@ function EnderPearl.Init(Client)
 	-- =========================
 
 	local Players = Client.Services.Players
-	local RunService = game:GetService("RunService")
+	local RunService = Client.Services.RunService
 	local Debris = game:GetService("Debris")
-	local UserInputService = game:GetService("UserInputService")
+	local UserInputService = Client.Services.UIS
 
 	local LocalPlayer = Client.Player
 	local Theme = Client.Theme
@@ -96,7 +96,6 @@ function EnderPearl.Init(Client)
 		pearl.Anchored = false
 		pearl.CanCollide = false
 		pearl.CanTouch = false
-		pearl.CanQuery = false
 		pearl.CastShadow = false
 
 		-- Aim using mouse position
