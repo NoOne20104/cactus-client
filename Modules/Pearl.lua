@@ -109,7 +109,6 @@ function Pearl.Init(Client)
 			return
 		end
 
-		-- Create pearl
 		local pearl = Instance.new("Part")
 
 		pearl.Name = "GreenEnderPearl"
@@ -140,7 +139,7 @@ function Pearl.Init(Client)
 
 		pearl.Parent = workspace
 
-		-- Throw
+		-- Throw using slider speed
 		pearl.AssemblyLinearVelocity =
 			direction * State.ThrowSpeed
 
@@ -182,6 +181,7 @@ function Pearl.Init(Client)
 					if connection then
 						connection:Disconnect()
 					end
+
 					return
 				end
 
@@ -189,8 +189,7 @@ function Pearl.Init(Client)
 					pearl.Position
 
 				local movement =
-					currentPosition
-					- previousPosition
+					currentPosition - previousPosition
 
 				if movement.Magnitude > 0.001 then
 
@@ -345,7 +344,7 @@ function Pearl.Init(Client)
 	end)
 
 	-- =========================
-	-- Enable toggle
+	-- Pearl toggle
 	-- =========================
 
 	local toggleButton =
@@ -376,47 +375,30 @@ function Pearl.Init(Client)
 		toggleButton
 	).CornerRadius = UDim.new(0, 6)
 
-	toggleButton.MouseButton1Click:Connect(function()
-
-		State.Enabled =
-			not State.Enabled
-
-		if State.Enabled then
-
-			toggleButton.Text =
-				"Pearl Throwing : ON"
-
-			toggleButton.TextColor3 =
-				Color3.fromRGB(0, 255, 120)
-
-		else
-
-			toggleButton.Text =
-				"Pearl Throwing : OFF"
-
-			toggleButton.TextColor3 =
-				Theme.TEXT_DIM
-		end
-	end)
-
 	-- =========================
-	-- Speed slider
+	-- Speed slider holder
+	-- Hidden until enabled
 	-- =========================
 
 	local sliderHolder =
 		Instance.new("Frame")
 
 	sliderHolder.Size =
-		UDim2.new(1, 0, 0, 70)
+		UDim2.new(1, 0, 0, 52)
 
 	sliderHolder.BackgroundTransparency = 1
+	sliderHolder.Visible = false
 	sliderHolder.Parent = scroll
+
+	-- =========================
+	-- Speed value
+	-- =========================
 
 	local speedLabel =
 		Instance.new("TextLabel")
 
 	speedLabel.Size =
-		UDim2.new(1, 0, 0, 22)
+		UDim2.new(1, 0, 0, 20)
 
 	speedLabel.BackgroundTransparency = 1
 	speedLabel.Font = Enum.Font.Code
@@ -435,7 +417,10 @@ function Pearl.Init(Client)
 	speedLabel.Parent =
 		sliderHolder
 
+	-- =========================
 	-- Slider bar
+	-- =========================
+
 	local sliderBackground =
 		Instance.new("Frame")
 
@@ -456,12 +441,19 @@ function Pearl.Init(Client)
 		sliderBackground
 	).CornerRadius = UDim.new(1, 0)
 
+	-- =========================
+	-- Starting value
+	-- =========================
+
 	local startingPercent =
 		(State.ThrowSpeed - MIN_THROW_SPEED)
 		/
 		(MAX_THROW_SPEED - MIN_THROW_SPEED)
 
+	-- =========================
 	-- Slider fill
+	-- =========================
+
 	local sliderFill =
 		Instance.new("Frame")
 
@@ -484,7 +476,10 @@ function Pearl.Init(Client)
 		sliderFill
 	).CornerRadius = UDim.new(1, 0)
 
+	-- =========================
 	-- Slider knob
+	-- =========================
+
 	local sliderKnob =
 		Instance.new("Frame")
 
@@ -513,7 +508,10 @@ function Pearl.Init(Client)
 		sliderKnob
 	).CornerRadius = UDim.new(1, 0)
 
+	-- =========================
 	-- Invisible slider input
+	-- =========================
+
 	local sliderInput =
 		Instance.new("TextButton")
 
@@ -550,12 +548,19 @@ function Pearl.Init(Client)
 			absoluteSize
 
 		percent =
-			math.clamp(percent, 0, 1)
+			math.clamp(
+				percent,
+				0,
+				1
+			)
 
 		local speed =
 			MIN_THROW_SPEED
 			+
-			(MAX_THROW_SPEED - MIN_THROW_SPEED)
+			(
+				MAX_THROW_SPEED
+				- MIN_THROW_SPEED
+			)
 			* percent
 
 		-- Snap to nearest 10
@@ -564,7 +569,8 @@ function Pearl.Init(Client)
 				speed / 10 + 0.5
 			) * 10
 
-		State.ThrowSpeed = speed
+		State.ThrowSpeed =
+			speed
 
 		local visualPercent =
 			(State.ThrowSpeed - MIN_THROW_SPEED)
@@ -640,37 +646,38 @@ function Pearl.Init(Client)
 	end)
 
 	-- =========================
-	-- Speed range
+	-- Toggle logic
 	-- =========================
 
-	local rangeLabel =
-		Instance.new("TextLabel")
+	toggleButton.MouseButton1Click:Connect(function()
 
-	rangeLabel.Position =
-		UDim2.new(0, 2, 0, 46)
+		State.Enabled =
+			not State.Enabled
 
-	rangeLabel.Size =
-		UDim2.new(1, -4, 0, 18)
+		-- Slider only exists visually
+		-- while pearl throwing is enabled
+		sliderHolder.Visible =
+			State.Enabled
 
-	rangeLabel.BackgroundTransparency = 1
-	rangeLabel.Font = Enum.Font.Code
-	rangeLabel.TextSize = 11
+		if State.Enabled then
 
-	rangeLabel.TextXAlignment =
-		Enum.TextXAlignment.Left
+			toggleButton.Text =
+				"Pearl Throwing : ON"
 
-	rangeLabel.TextColor3 =
-		Theme.TEXT_DIM
+			toggleButton.TextColor3 =
+				Color3.fromRGB(0, 255, 120)
 
-	rangeLabel.Text =
-		string.format(
-			"%d  —  %d",
-			MIN_THROW_SPEED,
-			MAX_THROW_SPEED
-		)
+		else
 
-	rangeLabel.Parent =
-		sliderHolder
+			State.DraggingSlider = false
+
+			toggleButton.Text =
+				"Pearl Throwing : OFF"
+
+			toggleButton.TextColor3 =
+				Theme.TEXT_DIM
+		end
+	end)
 
 	-- =========================
 	-- Left click throwing
@@ -686,8 +693,8 @@ function Pearl.Init(Client)
 			return
 		end
 
-		-- Clicking anywhere inside CactusClient
-		-- will NOT throw a pearl
+		-- Never throw when clicking
+		-- anywhere inside CactusClient
 		if isMouseOverClientGui() then
 			return
 		end
