@@ -1,26 +1,24 @@
--- EnderPearl.lua
--- Cactus Client – Dev / QA Ender Pearl Tool
--- Local projectile + teleport testing
+-- Pearl.lua
+-- Cactus Client – Ender Pearl Tool
 
-local EnderPearl = {}
+local Pearl = {}
 
-function EnderPearl.Init(Client)
+function Pearl.Init(Client)
 
 	-- =========================
 	-- Core
 	-- =========================
 
-	local Players = Client.Services.Players
 	local RunService = Client.Services.RunService
-	local Debris = game:GetService("Debris")
 	local UserInputService = Client.Services.UIS
+	local Debris = game:GetService("Debris")
 
 	local LocalPlayer = Client.Player
 	local Theme = Client.Theme
 	local Page = Client.Pages.Pearl
 
 	if not Page then
-		warn("[EnderPearl] Page not found")
+		warn("[Pearl] Page not found")
 		return
 	end
 
@@ -60,11 +58,37 @@ function EnderPearl.Init(Client)
 		return character and character:FindFirstChild("Head")
 	end
 
+	local function isMouseOverClientGui()
+		local mousePosition = UserInputService:GetMouseLocation()
+
+		local guiObjects =
+			LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(
+				mousePosition.X,
+				mousePosition.Y
+			)
+
+		local cactusGui =
+			LocalPlayer.PlayerGui:FindFirstChild("CactusClient")
+
+		if not cactusGui then
+			return false
+		end
+
+		for _, guiObject in ipairs(guiObjects) do
+			if guiObject:IsDescendantOf(cactusGui) then
+				return true
+			end
+		end
+
+		return false
+	end
+
 	-- =========================
 	-- Pearl logic
 	-- =========================
 
 	local function throwPearl()
+
 		if not State.Enabled then
 			return
 		end
@@ -87,6 +111,7 @@ function EnderPearl.Init(Client)
 
 		-- Create pearl
 		local pearl = Instance.new("Part")
+
 		pearl.Name = "GreenEnderPearl"
 		pearl.Shape = Enum.PartType.Ball
 		pearl.Size = Vector3.new(1.2, 1.2, 1.2)
@@ -98,15 +123,17 @@ function EnderPearl.Init(Client)
 		pearl.CanTouch = false
 		pearl.CastShadow = false
 
-		-- Aim using mouse position
-		local mouseRay = camera:ViewportPointToRay(
-			mouse.X,
-			mouse.Y
-		)
+		-- Aim toward mouse
+		local mouseRay =
+			camera:ViewportPointToRay(
+				mouse.X,
+				mouse.Y
+			)
 
-		local direction = mouseRay.Direction.Unit
+		local direction =
+			mouseRay.Direction.Unit
 
-		-- Spawn slightly ahead of player
+		-- Spawn slightly in front of player
 		pearl.Position =
 			head.Position
 			+ direction * 3
@@ -129,78 +156,92 @@ function EnderPearl.Init(Client)
 		-- =========================
 
 		local rayParams = RaycastParams.new()
-		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+		rayParams.FilterType =
+			Enum.RaycastFilterType.Exclude
+
 		rayParams.FilterDescendantsInstances = {
 			character,
-			pearl
+			pearl,
 		}
 
-		local previousPosition = pearl.Position
+		local previousPosition =
+			pearl.Position
+
 		local landed = false
 		local connection
 
-		connection = RunService.Heartbeat:Connect(function()
+		connection =
+			RunService.Heartbeat:Connect(function()
 
-			if landed then
-				return
-			end
-
-			if not pearl.Parent then
-				if connection then
-					connection:Disconnect()
+				if landed then
+					return
 				end
 
-				return
-			end
+				if not pearl.Parent then
+					if connection then
+						connection:Disconnect()
+					end
+					return
+				end
 
-			local currentPosition = pearl.Position
-			local movement = currentPosition - previousPosition
+				local currentPosition =
+					pearl.Position
 
-			if movement.Magnitude > 0.001 then
+				local movement =
+					currentPosition
+					- previousPosition
 
-				local result = workspace:Raycast(
-					previousPosition,
-					movement,
-					rayParams
-				)
+				if movement.Magnitude > 0.001 then
 
-				if result then
-					local hit = result.Instance
-
-					local validHit =
-						hit == workspace.Terrain
-						or (
-							hit:IsA("BasePart")
-							and hit.CanCollide
+					local result =
+						workspace:Raycast(
+							previousPosition,
+							movement,
+							rayParams
 						)
 
-					if validHit then
+					if result then
 
-						landed = true
+						local hit =
+							result.Instance
 
-						if connection then
-							connection:Disconnect()
-						end
-
-						local impactPosition = result.Position
-
-						pearl:Destroy()
-
-						-- Teleport slightly above impact
-						character:PivotTo(
-							CFrame.new(
-								impactPosition
-								+ Vector3.new(0, 3, 0)
+						local validHit =
+							hit == workspace.Terrain
+							or (
+								hit:IsA("BasePart")
+								and hit.CanCollide
 							)
-						)
 
-						return
+						if validHit then
+
+							landed = true
+
+							if connection then
+								connection:Disconnect()
+							end
+
+							local impactPosition =
+								result.Position
+
+							pearl:Destroy()
+
+							-- Teleport slightly above impact
+							character:PivotTo(
+								CFrame.new(
+									impactPosition
+									+ Vector3.new(0, 3, 0)
+								)
+							)
+
+							return
+						end
 					end
 				end
-			end
 
-			previousPosition = currentPosition
-		end)
+				previousPosition =
+					currentPosition
+			end)
 
 		Debris:AddItem(pearl, 15)
 	end
@@ -210,16 +251,27 @@ function EnderPearl.Init(Client)
 	-- =========================
 
 	local Panel = Instance.new("Frame")
-	Panel.Size = UDim2.new(0, 290, 1, -12)
-	Panel.Position = UDim2.fromOffset(0, 0)
-	Panel.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+
+	Panel.Size =
+		UDim2.new(0, 290, 1, -12)
+
+	Panel.Position =
+		UDim2.fromOffset(0, 0)
+
+	Panel.BackgroundColor3 =
+		Color3.fromRGB(14, 14, 14)
+
 	Panel.BorderSizePixel = 0
 	Panel.Parent = Page
 
-	Instance.new("UICorner", Panel).CornerRadius =
-		UDim.new(0, 10)
+	Instance.new(
+		"UICorner",
+		Panel
+	).CornerRadius = UDim.new(0, 10)
 
-	local stroke = Instance.new("UIStroke")
+	local stroke =
+		Instance.new("UIStroke")
+
 	stroke.Color = Theme.STROKE
 	stroke.Thickness = 1
 	stroke.Parent = Panel
@@ -228,8 +280,12 @@ function EnderPearl.Init(Client)
 	-- Title
 	-- =========================
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, 0, 0, 28)
+	local title =
+		Instance.new("TextLabel")
+
+	title.Size =
+		UDim2.new(1, 0, 0, 28)
+
 	title.BackgroundTransparency = 1
 	title.Text = "Ender Pearl"
 	title.Font = Enum.Font.Code
@@ -241,20 +297,34 @@ function EnderPearl.Init(Client)
 	-- Scroll
 	-- =========================
 
-	local scroll = Instance.new("ScrollingFrame")
-	scroll.Position = UDim2.new(0, 0, 0, 28)
-	scroll.Size = UDim2.new(1, 0, 1, -28)
-	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	local scroll =
+		Instance.new("ScrollingFrame")
+
+	scroll.Position =
+		UDim2.new(0, 0, 0, 28)
+
+	scroll.Size =
+		UDim2.new(1, 0, 1, -28)
+
+	scroll.CanvasSize =
+		UDim2.new(0, 0, 0, 0)
+
 	scroll.ScrollBarThickness = 4
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.Parent = Panel
 
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 10)
+	local layout =
+		Instance.new("UIListLayout")
+
+	layout.Padding =
+		UDim.new(0, 10)
+
 	layout.Parent = scroll
 
-	local pad = Instance.new("UIPadding")
+	local pad =
+		Instance.new("UIPadding")
+
 	pad.PaddingTop = UDim.new(0, 10)
 	pad.PaddingLeft = UDim.new(0, 6)
 	pad.PaddingRight = UDim.new(0, 6)
@@ -278,90 +348,97 @@ function EnderPearl.Init(Client)
 	-- Enable toggle
 	-- =========================
 
-	local toggleButton = Instance.new("TextButton")
-	toggleButton.Size = UDim2.new(1, 0, 0, 32)
-	toggleButton.BackgroundColor3 = Theme.BUTTON
-	toggleButton.Text = "Pearl Throwing : OFF"
-	toggleButton.Font = Enum.Font.Code
-	toggleButton.TextSize = 13
-	toggleButton.TextColor3 = Theme.TEXT_DIM
-	toggleButton.Parent = scroll
+	local toggleButton =
+		Instance.new("TextButton")
 
-	Instance.new("UICorner", toggleButton).CornerRadius =
-		UDim.new(0, 6)
+	toggleButton.Size =
+		UDim2.new(1, 0, 0, 32)
+
+	toggleButton.BackgroundColor3 =
+		Theme.BUTTON
+
+	toggleButton.Text =
+		"Pearl Throwing : OFF"
+
+	toggleButton.Font =
+		Enum.Font.Code
+
+	toggleButton.TextSize = 13
+
+	toggleButton.TextColor3 =
+		Theme.TEXT_DIM
+
+	toggleButton.Parent =
+		scroll
+
+	Instance.new(
+		"UICorner",
+		toggleButton
+	).CornerRadius = UDim.new(0, 6)
 
 	toggleButton.MouseButton1Click:Connect(function()
 
-		State.Enabled = not State.Enabled
+		State.Enabled =
+			not State.Enabled
 
 		if State.Enabled then
-			toggleButton.Text = "Pearl Throwing : ON"
+
+			toggleButton.Text =
+				"Pearl Throwing : ON"
+
 			toggleButton.TextColor3 =
 				Color3.fromRGB(0, 255, 120)
+
 		else
-			toggleButton.Text = "Pearl Throwing : OFF"
+
+			toggleButton.Text =
+				"Pearl Throwing : OFF"
+
 			toggleButton.TextColor3 =
 				Theme.TEXT_DIM
 		end
 	end)
 
 	-- =========================
-	-- Manual throw button
+	-- Speed slider
 	-- =========================
 
-	local throwButton = Instance.new("TextButton")
-	throwButton.Size = UDim2.new(1, 0, 0, 32)
-	throwButton.BackgroundColor3 = Theme.BUTTON
-	throwButton.Text = "Throw Pearl"
-	throwButton.Font = Enum.Font.Code
-	throwButton.TextSize = 13
-	throwButton.TextColor3 = Theme.TEXT
-	throwButton.Parent = scroll
+	local sliderHolder =
+		Instance.new("Frame")
 
-	Instance.new("UICorner", throwButton).CornerRadius =
-		UDim.new(0, 6)
+	sliderHolder.Size =
+		UDim2.new(1, 0, 0, 70)
 
-	throwButton.MouseButton1Click:Connect(function()
-
-		-- Allows manual button throw even
-		-- when mouse throwing is disabled.
-
-		local oldEnabled = State.Enabled
-
-		State.Enabled = true
-
-		throwPearl()
-
-		State.Enabled = oldEnabled
-	end)
-
-	-- =========================
-	-- Speed slider holder
-	-- =========================
-
-	local sliderHolder = Instance.new("Frame")
-	sliderHolder.Size = UDim2.new(1, 0, 0, 70)
 	sliderHolder.BackgroundTransparency = 1
 	sliderHolder.Parent = scroll
 
-	local speedLabel = Instance.new("TextLabel")
-	speedLabel.Size = UDim2.new(1, 0, 0, 22)
+	local speedLabel =
+		Instance.new("TextLabel")
+
+	speedLabel.Size =
+		UDim2.new(1, 0, 0, 22)
+
 	speedLabel.BackgroundTransparency = 1
 	speedLabel.Font = Enum.Font.Code
 	speedLabel.TextSize = 12
-	speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-	speedLabel.TextColor3 = Theme.TEXT
+
+	speedLabel.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	speedLabel.TextColor3 =
+		Theme.TEXT
+
 	speedLabel.Text =
 		"Throw Speed : "
 		.. tostring(State.ThrowSpeed)
 
-	speedLabel.Parent = sliderHolder
+	speedLabel.Parent =
+		sliderHolder
 
-	-- =========================
-	-- Slider background
-	-- =========================
+	-- Slider bar
+	local sliderBackground =
+		Instance.new("Frame")
 
-	local sliderBackground = Instance.new("Frame")
 	sliderBackground.Position =
 		UDim2.new(0, 4, 0, 32)
 
@@ -379,16 +456,14 @@ function EnderPearl.Init(Client)
 		sliderBackground
 	).CornerRadius = UDim.new(1, 0)
 
-	-- =========================
-	-- Slider fill
-	-- =========================
-
-	local sliderFill = Instance.new("Frame")
-
 	local startingPercent =
 		(State.ThrowSpeed - MIN_THROW_SPEED)
 		/
 		(MAX_THROW_SPEED - MIN_THROW_SPEED)
+
+	-- Slider fill
+	local sliderFill =
+		Instance.new("Frame")
 
 	sliderFill.Size =
 		UDim2.new(
@@ -409,12 +484,12 @@ function EnderPearl.Init(Client)
 		sliderFill
 	).CornerRadius = UDim.new(1, 0)
 
-	-- =========================
 	-- Slider knob
-	-- =========================
+	local sliderKnob =
+		Instance.new("Frame")
 
-	local sliderKnob = Instance.new("Frame")
-	sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+	sliderKnob.AnchorPoint =
+		Vector2.new(0.5, 0.5)
 
 	sliderKnob.Position =
 		UDim2.new(
@@ -438,11 +513,10 @@ function EnderPearl.Init(Client)
 		sliderKnob
 	).CornerRadius = UDim.new(1, 0)
 
-	-- =========================
-	-- Slider input area
-	-- =========================
+	-- Invisible slider input
+	local sliderInput =
+		Instance.new("TextButton")
 
-	local sliderInput = Instance.new("TextButton")
 	sliderInput.Size =
 		UDim2.new(1, 0, 0, 32)
 
@@ -466,27 +540,25 @@ function EnderPearl.Init(Client)
 		local absoluteSize =
 			sliderBackground.AbsoluteSize.X
 
+		if absoluteSize <= 0 then
+			return
+		end
+
 		local percent =
 			(inputX - absolutePosition)
 			/
 			absoluteSize
 
-		percent = math.clamp(
-			percent,
-			0,
-			1
-		)
+		percent =
+			math.clamp(percent, 0, 1)
 
 		local speed =
 			MIN_THROW_SPEED
 			+
-			(
-				MAX_THROW_SPEED
-				- MIN_THROW_SPEED
-			)
+			(MAX_THROW_SPEED - MIN_THROW_SPEED)
 			* percent
 
-		-- Round to nearest 10
+		-- Snap to nearest 10
 		speed =
 			math.floor(
 				speed / 10 + 0.5
@@ -521,15 +593,15 @@ function EnderPearl.Init(Client)
 	end
 
 	-- =========================
-	-- Slider events
+	-- Slider input
 	-- =========================
 
 	sliderInput.InputBegan:Connect(function(input)
 
-		if input.UserInputType ==
-			Enum.UserInputType.MouseButton1
-			or input.UserInputType ==
-			Enum.UserInputType.Touch then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
 
 			State.DraggingSlider = true
 
@@ -545,10 +617,10 @@ function EnderPearl.Init(Client)
 			return
 		end
 
-		if input.UserInputType ==
-			Enum.UserInputType.MouseMovement
-			or input.UserInputType ==
-			Enum.UserInputType.Touch then
+		if
+			input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
 
 			updateSlider(
 				input.Position.X
@@ -558,20 +630,22 @@ function EnderPearl.Init(Client)
 
 	UserInputService.InputEnded:Connect(function(input)
 
-		if input.UserInputType ==
-			Enum.UserInputType.MouseButton1
-			or input.UserInputType ==
-			Enum.UserInputType.Touch then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
 
 			State.DraggingSlider = false
 		end
 	end)
 
 	-- =========================
-	-- Speed range text
+	-- Speed range
 	-- =========================
 
-	local rangeLabel = Instance.new("TextLabel")
+	local rangeLabel =
+		Instance.new("TextLabel")
+
 	rangeLabel.Position =
 		UDim2.new(0, 2, 0, 46)
 
@@ -581,6 +655,7 @@ function EnderPearl.Init(Client)
 	rangeLabel.BackgroundTransparency = 1
 	rangeLabel.Font = Enum.Font.Code
 	rangeLabel.TextSize = 11
+
 	rangeLabel.TextXAlignment =
 		Enum.TextXAlignment.Left
 
@@ -594,7 +669,8 @@ function EnderPearl.Init(Client)
 			MAX_THROW_SPEED
 		)
 
-	rangeLabel.Parent = sliderHolder
+	rangeLabel.Parent =
+		sliderHolder
 
 	-- =========================
 	-- Left click throwing
@@ -606,17 +682,13 @@ function EnderPearl.Init(Client)
 			return
 		end
 
-		-- Prevent GUI clicks from throwing pearls
-		local mousePosition =
-			UserInputService:GetMouseLocation()
+		if State.DraggingSlider then
+			return
+		end
 
-		local guiObjects =
-			LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(
-				mousePosition.X,
-				mousePosition.Y
-			)
-
-		if #guiObjects > 0 then
+		-- Clicking anywhere inside CactusClient
+		-- will NOT throw a pearl
+		if isMouseOverClientGui() then
 			return
 		end
 
@@ -624,4 +696,4 @@ function EnderPearl.Init(Client)
 	end)
 end
 
-return EnderPearl
+return Pearl
