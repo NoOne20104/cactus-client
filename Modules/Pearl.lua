@@ -282,10 +282,7 @@ function Pearl.Init(Client)
 		UDim2.new(1, 0, 0, 28)
 
 	title.BackgroundTransparency = 1
-	title.Text = "
-	
-	
-	Pearl"
+	title.Text = "Pearl"
 	title.Font = Enum.Font.Code
 	title.TextSize = 15
 	title.TextColor3 = Theme.TEXT
